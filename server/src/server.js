@@ -8,7 +8,7 @@ import rateLimit from 'express-rate-limit';
 import { Server as SocketIOServer } from 'socket.io';
 import dotenv from 'dotenv';
 
-import { connectDB } from './config/db.js';
+import { connectDB, disconnectDB } from './config/db.js';
 import { Track } from './models/Track.js';
 import { seedDatabase } from './utils/seed.js';
 import authRoutes from './routes/authRoutes.js';
@@ -31,15 +31,17 @@ const server = http.createServer(app);
 
 // Cross-Origin Resource Sharing
 const allowedOrigins = [
-  process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  process.env.CLIENT_ORIGIN,
+  'https://ai-dj-studio-nine.vercel.app',
+  'https://ai-dj-studio.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173'
-];
+].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app') || origin.startsWith('http://localhost:')) {
       callback(null, true);
     } else {
       callback(null, true); // Permissive in dev/testing
@@ -131,5 +133,24 @@ if (process.env.NODE_ENV !== 'test') {
     process.exit(1);
   });
 }
+
+// Graceful process shutdown handling
+process.on('SIGTERM', async () => {
+  console.log('[SERVER] SIGTERM received. Gracefully shutting down...');
+  server.close(async () => {
+    await disconnectDB();
+    console.log('[SERVER] Server closed.');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', async () => {
+  console.log('[SERVER] SIGINT received. Gracefully shutting down...');
+  server.close(async () => {
+    await disconnectDB();
+    console.log('[SERVER] Server closed.');
+    process.exit(0);
+  });
+});
 
 export { app, server, io };

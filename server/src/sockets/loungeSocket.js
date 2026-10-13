@@ -79,13 +79,23 @@ export function setupLoungeSocket(io) {
           return socket.emit('error', { message: 'DJ Lounge not found.' });
         }
 
-        // Add or update participant presence
-        const userIdStr = socket.user._id.toString();
-        let participant = lounge.participants.find(p => p.user.toString() === userIdStr);
+        // Add or update participant presence with deduplication
+        const userIdStr = socket.user?._id ? socket.user._id.toString() : '';
+        const seenUsers = new Set();
+        lounge.participants = lounge.participants.filter(p => {
+          if (!p || !p.user) return false;
+          const uStr = p.user.toString();
+          if (seenUsers.has(uStr)) return false;
+          seenUsers.add(uStr);
+          return true;
+        });
+
+        let participant = lounge.participants.find(p => p.user && p.user.toString() === userIdStr);
         if (!participant && !socket.user.isGuest) {
+          const hostId = lounge.host?._id ? lounge.host._id.toString() : lounge.host ? lounge.host.toString() : '';
           lounge.participants.push({
             user: socket.user._id,
-            role: lounge.host._id.toString() === userIdStr ? 'host' : socket.user.role === 'admin' ? 'host' : 'listener',
+            role: hostId === userIdStr ? 'host' : socket.user.role === 'admin' ? 'host' : 'listener',
             socketId: socket.id,
             joinedAt: new Date(),
             lastSeenAt: new Date()
@@ -134,15 +144,15 @@ export function setupLoungeSocket(io) {
         try {
           const lounge = await DJLounge.findById(currentLoungeId);
           if (lounge) {
-            const userIdStr = socket.user._id.toString();
+            const userIdStr = socket.user?._id ? socket.user._id.toString() : '';
             lounge.participants = lounge.participants.filter(
-              p => p.socketId !== socket.id && p.user.toString() !== userIdStr
+              p => p && p.socketId !== socket.id && (userIdStr ? p.user?.toString() !== userIdStr : true)
             );
             await lounge.save();
 
             io.to(`lounge:${currentLoungeId}`).emit('lounge:participant-left', {
-              userId: socket.user._id,
-              displayName: socket.user.displayName,
+              userId: socket.user?._id,
+              displayName: socket.user?.displayName,
               participantCount: lounge.participants.length
             });
           }
@@ -600,15 +610,15 @@ export function setupLoungeSocket(io) {
         try {
           const lounge = await DJLounge.findById(currentLoungeId);
           if (lounge) {
-            const userIdStr = socket.user._id.toString();
+            const userIdStr = socket.user?._id ? socket.user._id.toString() : '';
             lounge.participants = lounge.participants.filter(
-              p => p.socketId !== socket.id && p.user.toString() !== userIdStr
+              p => p && p.socketId !== socket.id && (userIdStr ? p.user?.toString() !== userIdStr : true)
             );
             await lounge.save();
 
             io.to(`lounge:${currentLoungeId}`).emit('lounge:participant-left', {
-              userId: socket.user._id,
-              displayName: socket.user.displayName,
+              userId: socket.user?._id,
+              displayName: socket.user?.displayName,
               participantCount: lounge.participants.length
             });
           }

@@ -4,12 +4,13 @@ import { ChatMessage } from '../models/ChatMessage.js';
 import { SoundclashBattle } from '../models/SoundclashBattle.js';
 import { SessionAnalytics } from '../models/SessionAnalytics.js';
 import { calculateRoomCrowdSentiment } from '../utils/sentiment.js';
+import { resolveLoungeQuery } from './loungeController.js';
 
 export async function getLoungeAnalytics(req, res, next) {
   try {
     const { loungeId } = req.params;
 
-    const lounge = await DJLounge.findById(loungeId)
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(loungeId))
       .populate('currentTrack.track')
       .populate('queue.track');
 

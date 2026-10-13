@@ -13,6 +13,15 @@ function generateInviteCode() {
   return crypto.randomBytes(3).toString('hex').toUpperCase();
 }
 
+export function resolveLoungeQuery(idOrCode) {
+  if (!idOrCode) return { _id: null };
+  const cleaned = idOrCode.toString().trim();
+  if (mongoose.Types.ObjectId.isValid(cleaned)) {
+    return { _id: cleaned };
+  }
+  return { inviteCode: cleaned.toUpperCase() };
+}
+
 export async function createLounge(req, res, next) {
   try {
     const {
@@ -141,13 +150,7 @@ export async function getLounges(req, res, next) {
 export async function getLoungeById(req, res, next) {
   try {
     const { loungeId } = req.params;
-    let query;
-
-    if (mongoose.Types.ObjectId.isValid(loungeId)) {
-      query = { _id: loungeId };
-    } else {
-      query = { inviteCode: loungeId.toUpperCase() };
-    }
+    const query = resolveLoungeQuery(loungeId);
 
     const lounge = await DJLounge.findOne(query)
       .populate('host', 'displayName email avatar role')
@@ -178,9 +181,11 @@ export async function joinLounge(req, res, next) {
     const { loungeId } = req.params;
     const { inviteCode } = req.body;
 
-    let query = { _id: loungeId };
-    if (inviteCode) {
+    let query;
+    if (inviteCode && inviteCode.trim()) {
       query = { inviteCode: inviteCode.toUpperCase().trim() };
+    } else {
+      query = resolveLoungeQuery(loungeId);
     }
 
     const lounge = await DJLounge.findOne(query);
@@ -239,7 +244,7 @@ export async function joinLounge(req, res, next) {
 
 export async function leaveLounge(req, res, next) {
   try {
-    const lounge = await DJLounge.findById(req.params.loungeId);
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(req.params.loungeId));
     if (!lounge) return res.status(404).json({ success: false, message: 'Lounge not found.' });
 
     lounge.participants = lounge.participants.filter(p => p.user.toString() !== req.user._id.toString());
@@ -253,7 +258,7 @@ export async function leaveLounge(req, res, next) {
 
 export async function updateLoungeSettings(req, res, next) {
   try {
-    const lounge = await DJLounge.findById(req.params.loungeId);
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(req.params.loungeId));
     if (!lounge) return res.status(404).json({ success: false, message: 'Lounge not found.' });
 
     // Permissions: Host or Co-DJ or Admin
@@ -302,7 +307,7 @@ export async function updateLoungeSettings(req, res, next) {
 
 export async function endLounge(req, res, next) {
   try {
-    const lounge = await DJLounge.findById(req.params.loungeId);
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(req.params.loungeId));
     if (!lounge) return res.status(404).json({ success: false, message: 'Lounge not found.' });
 
     if (lounge.host.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
@@ -328,7 +333,7 @@ export async function endLounge(req, res, next) {
 
 export async function getQueue(req, res, next) {
   try {
-    const lounge = await DJLounge.findById(req.params.loungeId)
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(req.params.loungeId))
       .populate('queue.track')
       .populate('queue.addedBy', 'displayName avatar');
 
@@ -349,7 +354,7 @@ export async function addToQueue(req, res, next) {
     if (!trackId) return res.status(400).json({ success: false, message: 'trackId is required.' });
 
     const [lounge, track] = await Promise.all([
-      DJLounge.findById(req.params.loungeId).populate('currentTrack.track'),
+      DJLounge.findOne(resolveLoungeQuery(req.params.loungeId)).populate('currentTrack.track'),
       Track.findById(trackId)
     ]);
 
@@ -409,7 +414,7 @@ export async function addToQueue(req, res, next) {
 export async function voteQueueTrack(req, res, next) {
   try {
     const { trackId } = req.params;
-    const lounge = await DJLounge.findById(req.params.loungeId);
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(req.params.loungeId));
     if (!lounge) return res.status(404).json({ success: false, message: 'Lounge not found.' });
 
     const queueItem = lounge.queue.find(item => item.track?.toString() === trackId || item._id.toString() === trackId);
@@ -465,7 +470,7 @@ export async function reorderQueue(req, res, next) {
       return res.status(400).json({ success: false, message: 'reorderedQueueIds array is required.' });
     }
 
-    const lounge = await DJLounge.findById(req.params.loungeId);
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(req.params.loungeId));
     if (!lounge) return res.status(404).json({ success: false, message: 'Lounge not found.' });
 
     // Authorization check
@@ -511,7 +516,7 @@ export async function reorderQueue(req, res, next) {
 
 export async function getAiSegue(req, res, next) {
   try {
-    const lounge = await DJLounge.findById(req.params.loungeId)
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(req.params.loungeId))
       .populate('currentTrack.track')
       .populate('queue.track');
 
@@ -575,7 +580,10 @@ export async function getAiSegue(req, res, next) {
 export async function getMessages(req, res, next) {
   try {
     const { limit = 50 } = req.query;
-    const messages = await ChatMessage.find({ lounge: req.params.loungeId })
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(req.params.loungeId));
+    if (!lounge) return res.status(404).json({ success: false, message: 'Lounge not found.' });
+
+    const messages = await ChatMessage.find({ lounge: lounge._id })
       .populate('user', 'displayName avatar role')
       .sort({ createdAt: -1 })
       .limit(Number(limit));
@@ -596,10 +604,13 @@ export async function postMessage(req, res, next) {
       return res.status(400).json({ success: false, message: 'Message text cannot be empty.' });
     }
 
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(req.params.loungeId));
+    if (!lounge) return res.status(404).json({ success: false, message: 'Lounge not found.' });
+
     const sentiment = analyzeMessageSentiment(message);
 
     const chatMsg = await ChatMessage.create({
-      lounge: req.params.loungeId,
+      lounge: lounge._id,
       user: req.user._id,
       message: message.trim(),
       sentiment: {
@@ -622,7 +633,10 @@ export async function postMessage(req, res, next) {
 
 export async function getSentiment(req, res, next) {
   try {
-    const messages = await ChatMessage.find({ lounge: req.params.loungeId })
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(req.params.loungeId));
+    if (!lounge) return res.status(404).json({ success: false, message: 'Lounge not found.' });
+
+    const messages = await ChatMessage.find({ lounge: lounge._id })
       .sort({ createdAt: -1 })
       .limit(40);
 
@@ -644,7 +658,7 @@ export async function askAiDj(req, res, next) {
       return res.status(400).json({ success: false, message: 'Question cannot be empty.' });
     }
 
-    const lounge = await DJLounge.findById(req.params.loungeId)
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(req.params.loungeId))
       .populate('currentTrack.track')
       .populate('queue.track');
 

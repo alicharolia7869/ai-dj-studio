@@ -51,14 +51,26 @@ export const useLoungeStore = create((set, get) => ({
           activeBattle: l.activeBattle || null,
           messages: msgRes.status === 'fulfilled' ? (msgRes.value?.data?.messages || []) : [],
           crowdSentiment: sentimentRes.status === 'fulfilled' ? (sentimentRes.value?.data?.crowdSentiment || get().crowdSentiment) : get().crowdSentiment,
-          loading: false
+          loading: false,
+          error: null
         });
+      } else if (loungeRes.status === 'rejected') {
+        const errMsg = loungeRes.reason?.message || 'Failed to load DJ Lounge';
+        set({ error: errMsg });
       }
-    } catch (_) {}
+    } catch (err) {
+      set({ error: err.message || 'Error connecting to lounge' });
+    }
 
     // Safety timeout to ensure spinner is removed even on slow network
     setTimeout(() => {
-      if (get().loading) set({ loading: false });
+      if (get().loading) {
+        if (!get().lounge) {
+          set({ loading: false, error: get().error || 'Lounge connection timed out. Please verify the room code or server status.' });
+        } else {
+          set({ loading: false });
+        }
+      }
     }, 2000);
 
     // 2. Connect socket and register listeners

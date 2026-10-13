@@ -2,13 +2,14 @@ import { SoundclashBattle } from '../models/SoundclashBattle.js';
 import { DJLounge } from '../models/DJLounge.js';
 import { Track } from '../models/Track.js';
 import { aiDjEngine } from '../services/aiEngine.js';
+import { resolveLoungeQuery } from './loungeController.js';
 
 export async function createBattle(req, res, next) {
   try {
     const { loungeId } = req.params;
     const { candidateTrackIds = [], durationSeconds = 45 } = req.body;
 
-    const lounge = await DJLounge.findById(loungeId);
+    const lounge = await DJLounge.findOne(resolveLoungeQuery(loungeId));
     if (!lounge) return res.status(404).json({ success: false, message: 'Lounge not found.' });
 
     // Host or Co-DJ permission

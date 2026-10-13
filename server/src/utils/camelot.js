@@ -264,7 +264,12 @@ export function evaluateSegueCandidate(currentTrack, candidateTrack, options = {
  * @returns {{ validCandidates: Array<Object>, rejectedCandidates: Array<Object>, bestCandidate: Object|null }}
  */
 export function rankSegueCandidates(currentTrack, candidates = [], options = {}) {
-  const evaluations = candidates.map(candidate => evaluateSegueCandidate(currentTrack, candidate, options));
+  if (!currentTrack || !Array.isArray(candidates) || candidates.length === 0) {
+    return { validCandidates: [], rejectedCandidates: [], bestCandidate: null };
+  }
+  const evaluations = candidates
+    .filter(Boolean)
+    .map(candidate => evaluateSegueCandidate(currentTrack, candidate, options));
 
   const validCandidates = evaluations
     .filter(res => res.compatible)

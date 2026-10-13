@@ -166,6 +166,12 @@ class AudioEngine {
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
       osc.connect(gain);
       gain.connect(this.masterGain);
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch (_) {}
+      };
       osc.start(now);
       osc.stop(now + 0.2);
     }
@@ -178,6 +184,12 @@ class AudioEngine {
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
       noise.connect(gain);
       gain.connect(this.masterGain);
+      noise.onended = () => {
+        try {
+          noise.disconnect();
+          gain.disconnect();
+        } catch (_) {}
+      };
       noise.start(now);
       noise.stop(now + 0.16);
     }
@@ -190,6 +202,12 @@ class AudioEngine {
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
       hat.connect(gain);
       gain.connect(this.masterGain);
+      hat.onended = () => {
+        try {
+          hat.disconnect();
+          gain.disconnect();
+        } catch (_) {}
+      };
       hat.start(now);
       hat.stop(now + 0.06);
     }
@@ -215,6 +233,13 @@ class AudioEngine {
       bass.connect(filter);
       filter.connect(gain);
       gain.connect(this.masterGain);
+      bass.onended = () => {
+        try {
+          bass.disconnect();
+          filter.disconnect();
+          gain.disconnect();
+        } catch (_) {}
+      };
       bass.start(now);
       bass.stop(now + 0.22);
     }
@@ -280,9 +305,23 @@ class AudioEngine {
       this.htmlAudio.src = '';
       this.htmlAudio = null;
     }
+    if (this.audioSourceNode) {
+      try { this.audioSourceNode.disconnect(); } catch (_) {}
+      this.audioSourceNode = null;
+    }
     if (this.synthInterval) {
       clearInterval(this.synthInterval);
       this.synthInterval = null;
+    }
+  }
+
+  destroy() {
+    this.stop();
+    if (this.audioCtx && this.audioCtx.state !== 'closed') {
+      try { this.audioCtx.close(); } catch (_) {}
+      this.audioCtx = null;
+      this.analyser = null;
+      this.masterGain = null;
     }
   }
 

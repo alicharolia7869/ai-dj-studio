@@ -9,18 +9,24 @@ export default function AudioVisualizer({ isPlaying = false, height = 48, barsCo
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
     const render = () => {
-      const data = audioEngine.getFrequencyData();
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        animId = requestAnimationFrame(render);
+        return;
+      }
+
+      const data = audioEngine.getFrequencyData() || [];
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const barWidth = (canvas.width / barsCount) - 2;
+      const barWidth = Math.max(2, (canvas.width / barsCount) - 2);
 
       for (let i = 0; i < barsCount; i++) {
-        // Sample frequency bin
-        const binIndex = Math.floor((i / barsCount) * data.length);
+        // Sample frequency bin safely
+        const binIndex = data.length > 0 ? Math.floor((i / barsCount) * data.length) : 0;
         const value = isPlaying ? (data[binIndex] || Math.floor(Math.random() * 120 + 20)) : 8;
-        const percent = Math.min(1, value / 255);
+        const percent = Math.min(1, Math.max(0, value / 255));
         const barHeight = Math.max(4, percent * canvas.height);
 
         // Electric purple to cyan gradient
@@ -32,7 +38,7 @@ export default function AudioVisualizer({ isPlaying = false, height = 48, barsCo
         ctx.fillStyle = gradient;
         ctx.beginPath();
         const x = i * (barWidth + 2);
-        const y = canvas.height - barHeight;
+        const y = Math.max(0, canvas.height - barHeight);
         const radius = 2;
         if (typeof ctx.roundRect === 'function') {
           ctx.roundRect(x, y, barWidth, barHeight, [radius, radius, 0, 0]);
@@ -50,7 +56,7 @@ export default function AudioVisualizer({ isPlaying = false, height = 48, barsCo
     return () => {
       if (animId) cancelAnimationFrame(animId);
     };
-  }, [isPlaying, barsCount]);
+  }, [isPlaying, barsCount, height]);
 
   return (
     <canvas

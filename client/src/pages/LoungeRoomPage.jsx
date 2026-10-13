@@ -27,7 +27,9 @@ import {
   Disc3,
   Clock,
   ChevronRight,
-  X
+  X,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import AudioVisualizer from '../components/AudioVisualizer.jsx';
 import CamelotBadge from '../components/CamelotBadge.jsx';
@@ -165,11 +167,40 @@ export default function LoungeRoomPage() {
     );
   };
 
-  if (loading || !lounge) {
+  if (loading) {
     return (
       <div className="min-h-[80vh] flex flex-col items-center justify-center">
         <div className="w-10 h-10 rounded-full border-2 border-violet-500 border-t-cyan-400 animate-spin mb-4" />
         <p className="text-xs font-mono text-slate-400">Connecting to DJ Lounge Audio Synchronizer...</p>
+      </div>
+    );
+  }
+
+  if (error || !lounge) {
+    return (
+      <div className="min-h-[80vh] flex flex-col items-center justify-center text-center p-6">
+        <div className="p-4 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 mb-4">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-white mb-2">DJ Lounge Unavailable</h2>
+        <p className="text-xs text-slate-400 max-w-md mb-6">
+          {error || `Unable to locate DJ Lounge "${loungeId}". The room may not exist, has ended, or the backend service is currently reconnecting.`}
+        </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => joinLounge(loungeId)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry Connection</span>
+          </button>
+          <Link
+            to="/dashboard"
+            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-xs transition-colors"
+          >
+            Back to Dashboard
+          </Link>
+        </div>
       </div>
     );
   }

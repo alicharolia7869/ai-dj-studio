@@ -89,7 +89,12 @@ export class AiDjEngine {
       ? "bringing down the intensity for a smooth atmospheric breath."
       : "keeping the dancefloor perfectly synchronized.";
 
-    return `${moodPhrase}. Moving from "${currentTrack.title}" by ${currentTrack.artist} into "${nextTrack.title}" by ${nextTrack.artist} — ${harmonicPhrase} while ${tempoPhrase}. ${energyPhrase}`;
+    const currTitle = currentTrack?.title || 'Current Track';
+    const currArtist = currentTrack?.artist || 'Unknown Artist';
+    const nextTitle = nextTrack?.title || 'Next Track';
+    const nextArtist = nextTrack?.artist || 'Unknown Artist';
+
+    return `${moodPhrase}. Moving from "${currTitle}" by ${currArtist} into "${nextTitle}" by ${nextArtist} — ${harmonicPhrase} while ${tempoPhrase}. ${energyPhrase}`;
   }
 
   /**
