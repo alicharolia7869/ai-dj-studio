@@ -90,7 +90,11 @@ export const useLoungeStore = create((set, get) => ({
     socket.off('lounge:participant-left');
 
     socket.on('lounge:state', (data) => {
-      const lounge = data.lounge;
+      const lounge = data?.lounge;
+      if (!lounge) {
+        set({ loading: false });
+        return;
+      }
       const curTrack = lounge.currentTrack?.track || null;
       set({
         lounge,

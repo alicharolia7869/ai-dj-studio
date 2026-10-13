@@ -70,8 +70,11 @@ class ApiClient {
   }
 
   async request(endpoint, options = {}) {
-    // If on a remote deployment (e.g. Vercel) and baseUrl is set to localhost, bypass to fallback immediately
-    if (this.isRemoteHost && this.baseUrl.includes('localhost')) {
+    const envUrl = import.meta.env.VITE_API_URL;
+    const hasExternalApi = envUrl && envUrl.startsWith('http') && !envUrl.includes('localhost');
+
+    // On remote deployment (e.g. Vercel) without external public API configured, use fallback directly
+    if (this.isRemoteHost && !hasExternalApi) {
       return this.handleFallbackRequest(endpoint, options);
     }
 
@@ -119,8 +122,8 @@ class ApiClient {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        // If 404 on /api on Vercel (no backend attached), fallback gracefully
-        if (response.status === 404 && this.isRemoteHost) {
+        // If 404/405 on Vercel (static file or unsupported method), fallback gracefully
+        if (this.isRemoteHost && (response.status === 404 || response.status === 405)) {
           return this.handleFallbackRequest(endpoint, options);
         }
         const error = new Error(data.message || `API error: ${response.status}`);
