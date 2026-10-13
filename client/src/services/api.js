@@ -234,29 +234,35 @@ class ApiClient {
       const search = urlObj.searchParams.get('search')?.toLowerCase();
       const key = urlObj.searchParams.get('key')?.toUpperCase();
       const genre = urlObj.searchParams.get('genre')?.toLowerCase();
-      const minBpm = Number(urlObj.searchParams.get('minBpm')) || 0;
-      const maxBpm = Number(urlObj.searchParams.get('maxBpm')) || 999;
+      const minBpmParam = urlObj.searchParams.get('minBpm');
+      const maxBpmParam = urlObj.searchParams.get('maxBpm');
 
-      let tracks = JSON.parse(localStorage.getItem('aidj_sim_tracks') || 'null') || MOCK_TRACKS;
+      let storedTracks = null;
+      try {
+        storedTracks = JSON.parse(localStorage.getItem('aidj_sim_tracks') || 'null');
+      } catch (_) {}
+      let tracks = (Array.isArray(storedTracks) && storedTracks.length > 0) ? storedTracks : [...MOCK_TRACKS];
 
       if (search) {
         tracks = tracks.filter(t =>
-          t.title.toLowerCase().includes(search) ||
-          t.artist.toLowerCase().includes(search) ||
-          t.genre.toLowerCase().includes(search)
+          t.title?.toLowerCase().includes(search) ||
+          t.artist?.toLowerCase().includes(search) ||
+          t.genre?.toLowerCase().includes(search)
         );
       }
       if (key) {
-        tracks = tracks.filter(t => t.acousticProfile?.camelotKey === key);
+        tracks = tracks.filter(t => (t.acousticProfile?.camelotKey || t.camelotKey) === key);
       }
       if (genre) {
-        tracks = tracks.filter(t => t.genre.toLowerCase().includes(genre));
+        tracks = tracks.filter(t => t.genre?.toLowerCase().includes(genre));
       }
-      if (minBpm > 0 || maxBpm < 999) {
-        tracks = tracks.filter(t => {
-          const bpm = t.acousticProfile?.bpm || 126;
-          return bpm >= minBpm && bpm <= maxBpm;
-        });
+      if (minBpmParam) {
+        const minVal = Number(minBpmParam);
+        tracks = tracks.filter(t => (t.acousticProfile?.bpm || t.bpm || 126) >= minVal);
+      }
+      if (maxBpmParam) {
+        const maxVal = Number(maxBpmParam);
+        tracks = tracks.filter(t => (t.acousticProfile?.bpm || t.bpm || 126) <= maxVal);
       }
 
       return {
