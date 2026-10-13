@@ -26,6 +26,18 @@ function getInitialBaseUrl() {
   return '/api/v1';
 }
 
+export function toQueryString(params = {}) {
+  const clean = {};
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== '' && v !== 'undefined' && v !== 'null') {
+      clean[k] = v;
+    }
+  }
+  const q = new URLSearchParams(clean).toString();
+  return q ? `?${q}` : '';
+}
+
+
 class ApiClient {
   constructor() {
     this.baseUrl = getInitialBaseUrl();
@@ -231,17 +243,23 @@ class ApiClient {
     // 4. Tracks list & filtering
     if (endpoint.startsWith('/tracks') && method === 'GET') {
       const urlObj = new URL('http://dummy' + endpoint);
-      const search = urlObj.searchParams.get('search')?.toLowerCase();
-      const key = urlObj.searchParams.get('key')?.toUpperCase();
-      const genre = urlObj.searchParams.get('genre')?.toLowerCase();
-      const minBpmParam = urlObj.searchParams.get('minBpm');
-      const maxBpmParam = urlObj.searchParams.get('maxBpm');
+      let search = urlObj.searchParams.get('search')?.toLowerCase();
+      let key = urlObj.searchParams.get('key')?.toUpperCase();
+      let genre = urlObj.searchParams.get('genre')?.toLowerCase();
+      let minBpmParam = urlObj.searchParams.get('minBpm');
+      let maxBpmParam = urlObj.searchParams.get('maxBpm');
+
+      if (search === 'undefined' || search === 'null' || !search) search = null;
+      if (key === 'UNDEFINED' || key === 'NULL' || !key) key = null;
+      if (genre === 'undefined' || genre === 'null' || !genre) genre = null;
+      if (minBpmParam === 'undefined' || minBpmParam === 'null') minBpmParam = null;
+      if (maxBpmParam === 'undefined' || maxBpmParam === 'null') maxBpmParam = null;
 
       let storedTracks = null;
       try {
         storedTracks = JSON.parse(localStorage.getItem('aidj_sim_tracks') || 'null');
       } catch (_) {}
-      let tracks = (Array.isArray(storedTracks) && storedTracks.length > 0) ? storedTracks : [...MOCK_TRACKS];
+      let tracks = (Array.isArray(storedTracks) && storedTracks.length > 0) ? [...storedTracks] : [...MOCK_TRACKS];
 
       if (search) {
         tracks = tracks.filter(t =>
@@ -258,11 +276,15 @@ class ApiClient {
       }
       if (minBpmParam) {
         const minVal = Number(minBpmParam);
-        tracks = tracks.filter(t => (t.acousticProfile?.bpm || t.bpm || 126) >= minVal);
+        if (!isNaN(minVal)) {
+          tracks = tracks.filter(t => (t.acousticProfile?.bpm || t.bpm || 126) >= minVal);
+        }
       }
       if (maxBpmParam) {
         const maxVal = Number(maxBpmParam);
-        tracks = tracks.filter(t => (t.acousticProfile?.bpm || t.bpm || 126) <= maxVal);
+        if (!isNaN(maxVal)) {
+          tracks = tracks.filter(t => (t.acousticProfile?.bpm || t.bpm || 126) <= maxVal);
+        }
       }
 
       return {
@@ -645,8 +667,7 @@ class ApiClient {
 
   // Lounges
   async getLounges(params = {}) {
-    const query = new URLSearchParams(params).toString();
-    return this.request(`/lounges${query ? `?${query}` : ''}`);
+    return this.request(`/lounges${toQueryString(params)}`);
   }
 
   async getLounge(id) {
@@ -754,8 +775,7 @@ class ApiClient {
 
   // Tracks
   async getTracks(params = {}) {
-    const query = new URLSearchParams(params).toString();
-    return this.request(`/tracks${query ? `?${query}` : ''}`);
+    return this.request(`/tracks${toQueryString(params)}`);
   }
 
   async getTrack(trackId) {
@@ -788,8 +808,7 @@ class ApiClient {
   }
 
   async getHistory(params = {}) {
-    const query = new URLSearchParams(params).toString();
-    return this.request(`/users/me/history${query ? `?${query}` : ''}`);
+    return this.request(`/users/me/history${toQueryString(params)}`);
   }
 
   async getPreferences() {

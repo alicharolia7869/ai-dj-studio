@@ -164,11 +164,25 @@ export function evaluateSegueCandidate(currentTrack, candidateTrack, options = {
     recentTrackIds = []
   } = options;
 
-  const currentKey = currentTrack.acousticProfile?.camelotKey || currentTrack.camelotKey;
-  const candidateKey = candidateTrack.acousticProfile?.camelotKey || candidateTrack.camelotKey;
-  const currentBpm = currentTrack.acousticProfile?.bpm || currentTrack.bpm;
-  const candidateBpm = candidateTrack.acousticProfile?.bpm || candidateTrack.bpm;
-  const candidateEnergy = Number(candidateTrack.acousticProfile?.energy ?? candidateTrack.energy ?? 0.5);
+  if (!currentTrack || !candidateTrack) {
+    return {
+      candidateId: candidateTrack?._id || candidateTrack?.id || 'unknown',
+      title: candidateTrack?.title || 'Unknown Track',
+      compatible: false,
+      score: 0,
+      confidence: 0,
+      harmonicCloseness: 0,
+      bpmDifferencePercent: 1.0,
+      energyDelta: 1.0,
+      reason: 'Missing track data for harmonic evaluation'
+    };
+  }
+
+  const currentKey = currentTrack?.acousticProfile?.camelotKey || currentTrack?.camelotKey;
+  const candidateKey = candidateTrack?.acousticProfile?.camelotKey || candidateTrack?.camelotKey;
+  const currentBpm = currentTrack?.acousticProfile?.bpm || currentTrack?.bpm;
+  const candidateBpm = candidateTrack?.acousticProfile?.bpm || candidateTrack?.bpm;
+  const candidateEnergy = Number(candidateTrack?.acousticProfile?.energy ?? candidateTrack?.energy ?? 0.5);
 
   const harmonic = evaluateHarmonicCompatibility(currentKey, candidateKey);
   const bpm = evaluateBpmCompatibility(currentBpm, candidateBpm, 0.08);
