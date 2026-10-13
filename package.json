@@ -1,0 +1,13 @@
+{
+  "name": "ai-dj-studio",
+  "version": "1.0.0",
+  "description": "AI DJ Studio - Real-Time Collaborative AI DJ Platform",
+  "private": true,
+  "scripts": {
+    "client": "npm run dev --prefix client",
+    "server": "npm run dev --prefix server",
+    "test": "npm run test --prefix server",
+    "build": "npm run build --prefix client",
+    "seed": "npm run seed --prefix server"
+  }
+}
