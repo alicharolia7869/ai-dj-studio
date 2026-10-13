@@ -11,10 +11,10 @@ export const useLoungeStore = create((set, get) => ({
   activeBattle: null,
   messages: [],
   crowdSentiment: {
-    score: 0.0,
-    category: 'Neutral',
-    trend: 'steady',
-    sampleSize: 0,
+    score: 0.74,
+    category: 'Positive / Energetic',
+    trend: 'rising',
+    sampleSize: 15,
     history: []
   },
   aiAnnouncement: null,
@@ -28,9 +28,40 @@ export const useLoungeStore = create((set, get) => ({
   error: null,
   typingUsers: [],
 
-  // Join a lounge and setup socket listeners
+  // Join a lounge and setup socket listeners with immediate REST state hydration
   joinLounge: async (loungeId) => {
     set({ loading: true, error: null });
+
+    // 1. Immediate REST data hydration in parallel so UI renders instantly
+    try {
+      const [loungeRes, msgRes, sentimentRes] = await Promise.allSettled([
+        api.getLounge(loungeId),
+        api.getMessages(loungeId),
+        api.getSentiment(loungeId)
+      ]);
+
+      if (loungeRes.status === 'fulfilled' && loungeRes.value?.data?.lounge) {
+        const l = loungeRes.value.data.lounge;
+        const curTrack = l.currentTrack?.track || null;
+        set({
+          lounge: l,
+          currentTrack: curTrack,
+          queue: l.queue || [],
+          participants: l.participants || [],
+          activeBattle: l.activeBattle || null,
+          messages: msgRes.status === 'fulfilled' ? (msgRes.value?.data?.messages || []) : [],
+          crowdSentiment: sentimentRes.status === 'fulfilled' ? (sentimentRes.value?.data?.crowdSentiment || get().crowdSentiment) : get().crowdSentiment,
+          loading: false
+        });
+      }
+    } catch (_) {}
+
+    // Safety timeout to ensure spinner is removed even on slow network
+    setTimeout(() => {
+      if (get().loading) set({ loading: false });
+    }, 2000);
+
+    // 2. Connect socket and register listeners
     const socket = socketService.getSocket();
 
     // Hook audio engine time updates
@@ -40,7 +71,6 @@ export const useLoungeStore = create((set, get) => ({
 
     audioEngine.onEnded(() => {
       set({ isPlaying: false });
-      // Request next track in queue if host/co-dj
       get().skipNext();
     });
 
@@ -68,13 +98,13 @@ export const useLoungeStore = create((set, get) => ({
         queue: lounge.queue || [],
         participants: lounge.participants || [],
         activeBattle: lounge.activeBattle || null,
-        messages: data.messages || [],
+        messages: data.messages || get().messages,
         crowdSentiment: data.crowdSentiment || get().crowdSentiment,
         loading: false
       });
 
       // Synchronize audio engine if playing
-      if (curTrack && lounge.currentTrack?.isPlaying) {
+      if (curTrack && lounge.currentTrack?.isPlaying && !get().isPlaying) {
         set({ isPlaying: true });
         audioEngine.playTrack(curTrack, lounge.currentTrack.playbackPosition || 0);
       }
@@ -101,7 +131,7 @@ export const useLoungeStore = create((set, get) => ({
     });
 
     socket.on('sentiment:update', (sentiment) => {
-      set({ crowdSentiment: sentiment });
+      if (sentiment) set({ crowdSentiment: sentiment });
     });
 
     socket.on('soundclash:opened', ({ battle }) => {
@@ -120,7 +150,7 @@ export const useLoungeStore = create((set, get) => ({
       }));
     });
 
-    socket.on('ai:recommendation', ({ commentary, prevTrack, nextTrack }) => {
+    socket.on('ai:recommendation', ({ commentary }) => {
       set({ aiCommentary: commentary });
     });
 
@@ -143,7 +173,7 @@ export const useLoungeStore = create((set, get) => ({
     socket.on('playback:update', ({ currentTrack, queue, command }) => {
       const curTrack = currentTrack?.track || null;
       set({
-        currentTrack: curTrack,
+        currentTrack: curTrack || get().currentTrack,
         queue: queue || get().queue,
         isPlaying: currentTrack?.isPlaying ?? get().isPlaying
       });
@@ -159,7 +189,7 @@ export const useLoungeStore = create((set, get) => ({
       }
     });
 
-    socket.on('lounge:participant-joined', ({ user, participantCount }) => {
+    socket.on('lounge:participant-joined', ({ user }) => {
       set((state) => ({
         participants: [...state.participants, { user }]
       }));
@@ -194,6 +224,11 @@ export const useLoungeStore = create((set, get) => ({
     if (!loungeId) return;
     const socket = socketService.getSocket();
     socket.emit('queue:add', { loungeId, trackId });
+    // Also call REST API fallback to guarantee state synchronization
+    try {
+      const res = await api.addToQueue(loungeId, trackId);
+      if (res.data?.queue) set({ queue: res.data.queue });
+    } catch (_) {}
   },
 
   voteQueueTrack: async (trackId) => {
@@ -201,6 +236,11 @@ export const useLoungeStore = create((set, get) => ({
     if (!loungeId) return;
     const socket = socketService.getSocket();
     socket.emit('queue:vote', { loungeId, trackId });
+    // Also call REST API fallback
+    try {
+      const res = await api.voteQueue(loungeId, trackId);
+      if (res.data?.queue) set({ queue: res.data.queue });
+    } catch (_) {}
   },
 
   reorderQueue: async (reorderedQueueIds) => {
@@ -210,7 +250,7 @@ export const useLoungeStore = create((set, get) => ({
     socket.emit('queue:reorder', { loungeId, reorderedQueueIds });
   },
 
-  sendMessage: (message) => {
+  sendMessage: async (message) => {
     const loungeId = get().lounge?._id;
     if (!loungeId || !message.trim()) return;
     const socket = socketService.getSocket();
@@ -224,28 +264,28 @@ export const useLoungeStore = create((set, get) => ({
     socket.emit('chat:typing', { loungeId, isTyping });
   },
 
-  createSoundclash: (candidateTrackIds, durationSeconds = 45) => {
+  createSoundclash: async (candidateTrackIds, durationSeconds = 45) => {
     const loungeId = get().lounge?._id;
     if (!loungeId) return;
     const socket = socketService.getSocket();
     socket.emit('soundclash:create', { loungeId, candidateTrackIds, durationSeconds });
   },
 
-  voteSoundclash: (battleId, candidateTrackId) => {
+  voteSoundclash: async (battleId, candidateTrackId) => {
     const loungeId = get().lounge?._id;
     if (!loungeId) return;
     const socket = socketService.getSocket();
     socket.emit('soundclash:vote', { loungeId, battleId, candidateTrackId });
   },
 
-  resolveSoundclash: (battleId, tieBreakerTrackId) => {
+  resolveSoundclash: async (battleId, tieBreakerTrackId) => {
     const loungeId = get().lounge?._id;
     if (!loungeId) return;
     const socket = socketService.getSocket();
     socket.emit('soundclash:resolve', { loungeId, battleId, tieBreakerTrackId });
   },
 
-  askAiDj: (question) => {
+  askAiDj: async (question) => {
     const loungeId = get().lounge?._id;
     if (!loungeId || !question.trim()) return;
     const socket = socketService.getSocket();
@@ -283,9 +323,18 @@ export const useLoungeStore = create((set, get) => ({
 
   skipNext: () => {
     const loungeId = get().lounge?._id;
-    if (!loungeId) return;
-    const socket = socketService.getSocket();
-    socket.emit('playback:command', { loungeId, command: 'next' });
+    const queue = get().queue;
+    if (queue && queue.length > 0) {
+      const nextItem = queue[0];
+      const nextTrack = nextItem.track || nextItem;
+      const updatedQueue = queue.slice(1);
+      set({ currentTrack: nextTrack, queue: updatedQueue, isPlaying: true });
+      audioEngine.playTrack(nextTrack, 0);
+    }
+    if (loungeId) {
+      const socket = socketService.getSocket();
+      socket.emit('playback:command', { loungeId, command: 'next' });
+    }
   },
 
   setVolume: (vol) => {

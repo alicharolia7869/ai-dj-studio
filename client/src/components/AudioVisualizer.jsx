@@ -33,9 +33,11 @@ export default function AudioVisualizer({ isPlaying = false, height = 48, barsCo
         ctx.beginPath();
         const x = i * (barWidth + 2);
         const y = canvas.height - barHeight;
-        const radius = 2;
-
-        ctx.roundRect(x, y, barWidth, barHeight, [radius, radius, 0, 0]);
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(x, y, barWidth, barHeight, [radius, radius, 0, 0]);
+        } else {
+          ctx.rect(x, y, barWidth, barHeight);
+        }
         ctx.fill();
       }
 

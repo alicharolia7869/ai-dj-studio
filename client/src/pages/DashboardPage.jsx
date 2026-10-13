@@ -37,15 +37,21 @@ export default function DashboardPage() {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        const [loungesRes, recsRes, histRes] = await Promise.all([
+        const [loungesResult, recsResult, histResult] = await Promise.allSettled([
           api.getLounges({ status: 'active' }),
           api.getRecommendations(),
           api.getHistory({ limit: 5 })
         ]);
 
-        setActiveLounges(loungesRes.data?.lounges || []);
-        setRecommendations(recsRes.data?.recommendations || []);
-        setHistory(histRes.data?.history || []);
+        if (loungesResult.status === 'fulfilled') {
+          setActiveLounges(loungesResult.value?.data?.lounges || []);
+        }
+        if (recsResult.status === 'fulfilled') {
+          setRecommendations(recsResult.value?.data?.recommendations || []);
+        }
+        if (histResult.status === 'fulfilled') {
+          setHistory(histResult.value?.data?.history || []);
+        }
       } catch (err) {
         console.error('Failed to load dashboard data:', err);
       } finally {

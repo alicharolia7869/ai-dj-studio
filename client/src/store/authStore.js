@@ -51,20 +51,31 @@ export const useAuthStore = create((set, get) => ({
 
   checkAuth: async () => {
     const token = api.getToken();
+    const storedUser = localStorage.getItem('aidj_user');
     if (!token) {
       set({ user: null, isAuthenticated: false });
       return;
     }
+
+    // Maintain existing session from localStorage while validating
+    if (storedUser) {
+      try {
+        set({ user: JSON.parse(storedUser), isAuthenticated: true });
+      } catch (_) {}
+    }
+
     try {
       const res = await api.getMe();
       if (res.data?.user) {
         set({ user: res.data.user, isAuthenticated: true });
         localStorage.setItem('aidj_user', JSON.stringify(res.data.user));
       }
-    } catch (_) {
-      // If failed, token might be invalid
-      api.clearTokens();
-      set({ user: null, token: null, isAuthenticated: false });
+    } catch (err) {
+      // Only clear credentials if the server explicitly rejected the token (401/403)
+      if (err.status === 401 || err.status === 403) {
+        api.clearTokens();
+        set({ user: null, token: null, isAuthenticated: false });
+      }
     }
   },
 

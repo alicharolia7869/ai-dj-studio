@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import mongoose from 'mongoose';
 import { DJLounge } from '../models/DJLounge.js';
 import { Track } from '../models/Track.js';
 import { ChatMessage } from '../models/ChatMessage.js';
@@ -140,10 +141,11 @@ export async function getLounges(req, res, next) {
 export async function getLoungeById(req, res, next) {
   try {
     const { loungeId } = req.params;
-    let query = { _id: loungeId };
+    let query;
 
-    // Support looking up by 6-character invite code as well
-    if (loungeId.length === 6 && !loungeId.match(/^[0-9a-fA-F]{24}$/)) {
+    if (mongoose.Types.ObjectId.isValid(loungeId)) {
+      query = { _id: loungeId };
+    } else {
       query = { inviteCode: loungeId.toUpperCase() };
     }
 

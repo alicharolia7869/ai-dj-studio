@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Radio,
@@ -41,6 +41,12 @@ export default function LandingPage() {
     { id: 2, user: 'Liam', text: 'That sub bass drop hits so clean 🙌', positive: true },
     { id: 3, user: 'Elena', text: 'Vote Quantum Horizon in the Soundclash battle!', positive: true }
   ]);
+
+  useEffect(() => {
+    return () => {
+      audioEngine.stop();
+    };
+  }, []);
 
   const toggleDemoAudio = () => {
     if (demoPlaying) {

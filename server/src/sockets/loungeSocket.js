@@ -131,11 +131,23 @@ export function setupLoungeSocket(io) {
     // Leave lounge
     socket.on('lounge:leave', async () => {
       if (currentLoungeId) {
+        try {
+          const lounge = await DJLounge.findById(currentLoungeId);
+          if (lounge) {
+            const userIdStr = socket.user._id.toString();
+            lounge.participants = lounge.participants.filter(
+              p => p.socketId !== socket.id && p.user.toString() !== userIdStr
+            );
+            await lounge.save();
+
+            io.to(`lounge:${currentLoungeId}`).emit('lounge:participant-left', {
+              userId: socket.user._id,
+              displayName: socket.user.displayName,
+              participantCount: lounge.participants.length
+            });
+          }
+        } catch (_) {}
         socket.leave(`lounge:${currentLoungeId}`);
-        io.to(`lounge:${currentLoungeId}`).emit('lounge:participant-left', {
-          userId: socket.user._id,
-          displayName: socket.user.displayName
-        });
         currentLoungeId = null;
       }
     });
@@ -583,12 +595,26 @@ export function setupLoungeSocket(io) {
       socket.emit('sync:pong', { clientTimestamp: timestamp, serverTimestamp: Date.now() });
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
       if (currentLoungeId) {
-        io.to(`lounge:${currentLoungeId}`).emit('lounge:participant-left', {
-          userId: socket.user._id,
-          displayName: socket.user.displayName
-        });
+        try {
+          const lounge = await DJLounge.findById(currentLoungeId);
+          if (lounge) {
+            const userIdStr = socket.user._id.toString();
+            lounge.participants = lounge.participants.filter(
+              p => p.socketId !== socket.id && p.user.toString() !== userIdStr
+            );
+            await lounge.save();
+
+            io.to(`lounge:${currentLoungeId}`).emit('lounge:participant-left', {
+              userId: socket.user._id,
+              displayName: socket.user.displayName,
+              participantCount: lounge.participants.length
+            });
+          }
+        } catch (err) {
+          console.error('[SOCKET DISCONNECT] Error updating participants:', err.message);
+        }
       }
     });
   });

@@ -399,7 +399,7 @@ export default function LoungeRoomPage() {
                           </div>
 
                           <button
-                            onClick={() => voteSoundclash(activeBattle._id, cand.track?._id)}
+                            onClick={() => voteSoundclash(activeBattle._id, cand.track?._id || cand.track || cand._id)}
                             disabled={activeBattle.status !== 'voting'}
                             className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-transform hover:scale-105 ${
                               userVotedForThis
@@ -516,7 +516,7 @@ export default function LoungeRoomPage() {
 
                         {/* Upvote button */}
                         <button
-                          onClick={() => voteQueueTrack(track?._id)}
+                          onClick={() => voteQueueTrack(track?._id || item.track?._id || item.track || item._id)}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all shrink-0 ${
                             userVoted
                               ? 'bg-cyan-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.4)]'
