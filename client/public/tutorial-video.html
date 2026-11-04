@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2-Minute Video Generator — How to Use AI DJ Studio</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-[#080B11] text-slate-100 min-h-screen p-6 font-sans">
+  <div class="max-w-4xl mx-auto flex flex-col gap-6">
+    <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div>
+        <h1 class="text-2xl font-black bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 bg-clip-text text-transparent">
+          AI DJ Studio — 2-Minute Video Generator
+        </h1>
+        <p class="text-sm text-slate-400 mt-1">High-definition 1080p animated video recorder for "How to Use AI DJ Studio"</p>
+      </div>
+      <a href="https://ai-dj-studio-nine.vercel.app" target="_blank" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-600/30">
+        Live Website ↗
+      </a>
+    </div>
+
+    <!-- Main Video Frame -->
+    <div class="relative aspect-video bg-black rounded-2xl overflow-hidden border border-slate-800 shadow-2xl flex items-center justify-center">
+      <canvas id="videoCanvas" width="1280" height="720" class="w-full h-full object-contain"></canvas>
+      
+      <!-- Overlay Playback Controls -->
+      <div id="startOverlay" class="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4 transition-all duration-300">
+        <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-600 to-pink-600 flex items-center justify-center shadow-xl shadow-indigo-500/40">
+          <svg class="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
+          </svg>
+        </div>
+        <div class="text-center">
+          <h2 class="text-xl font-bold text-white">Render & Watch 2-Minute Video</h2>
+          <p class="text-xs text-slate-400 max-w-sm mt-1">Includes 6 detailed chapters, UI transitions, live waveform animation, and sound effects.</p>
+        </div>
+        <div class="flex gap-3 mt-2">
+          <button id="renderPlayBtn" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 font-bold text-sm rounded-xl transition shadow-lg shadow-indigo-600/30">
+            ▶ Play Video Now
+          </button>
+          <button id="recordDownloadBtn" class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 font-bold text-sm rounded-xl transition shadow-lg shadow-pink-600/30">
+            ⏺ Record & Download (.webm / .mp4)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Video Status & Progress Bar -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between text-xs">
+        <div class="flex items-center gap-2">
+          <span id="recordingBadge" class="hidden w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+          <span id="statusLabel" class="font-bold text-indigo-400 uppercase tracking-wider">Ready</span>
+        </div>
+        <div class="font-mono text-slate-400">
+          <span id="timeElapsed">00:00</span> / <span id="timeTotal">02:00</span>
+        </div>
+      </div>
+      <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+        <div id="videoProgressBar" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-100" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <!-- Chapter Map -->
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2.5 text-center">
+        <div class="text-slate-500 font-mono text-[10px]">00:00 - 00:20</div>
+        <div class="font-bold text-indigo-300 mt-0.5">1. Quick Login</div>
+      </div>
+      <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2.5 text-center">
+        <div class="text-slate-500 font-mono text-[10px]">00:20 - 00:40</div>
+        <div class="font-bold text-purple-300 mt-0.5">2. Lounges</div>
+      </div>
+      <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2.5 text-center">
+        <div class="text-slate-500 font-mono text-[10px]">00:40 - 01:00</div>
+        <div class="font-bold text-cyan-300 mt-0.5">3. Live Audio</div>
+      </div>
+      <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2.5 text-center">
+        <div class="text-slate-500 font-mono text-[10px]">01:00 - 01:20</div>
+        <div class="font-bold text-amber-300 mt-0.5">4. Upvoting</div>
+      </div>
+      <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2.5 text-center">
+        <div class="text-slate-500 font-mono text-[10px]">01:20 - 01:40</div>
+        <div class="font-bold text-red-300 mt-0.5">5. Soundclash</div>
+      </div>
+      <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2.5 text-center">
+        <div class="text-slate-500 font-mono text-[10px]">01:40 - 02:00</div>
+        <div class="font-bold text-emerald-300 mt-0.5">6. Analytics</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('videoCanvas');
+    const ctx = canvas.getContext('2d');
+    const TOTAL_SECONDS = 120; // 2 Minutes
+    const CHAPTER_LENGTH = 20;  // 20s each = 6 chapters
+
+    const CHAPTERS = [
+      {
+        num: "01",
+        title: "QUICK LOGIN & AUTHENTICATION",
+        subtitle: "One-Click Demo Access or Listener Profile",
+        points: [
+          "Navigate to /login on ai-dj-studio-nine.vercel.app",
+          "Click the blue 'Demo: DJ Maya (Host)' button for instant host access",
+          "Or sign up with any email to join as a room listener"
+        ],
+        badge: "STEP 1 OF 6",
+        color: "#6366F1",
+        accent: "#818CF8",
+        url: "ai-dj-studio-nine.vercel.app/login",
+        mockTitle: "Host Cockpit: DJ Maya",
+        mockSub: "Session: Active JWT Authenticated"
+      },
+      {
+        num: "02",
+        title: "DISCOVER OR CREATE A LOUNGE",
+        subtitle: "Set Up Your Cyberpunk or Techno Room",
+        points: [
+          "Browse live public lounges or click '+ Create Lounge'",
+          "Customize your primary genre, target BPM, and vibe settings",
+          "Share your unique 6-character room invite code (e.g. NEXUS1)"
+        ],
+        badge: "STEP 2 OF 6",
+        color: "#A855F7",
+        accent: "#C084FC",
+        url: "ai-dj-studio-nine.vercel.app/lounge/create",
+        mockTitle: "Room Code: NEXUS1",
+        mockSub: "Genre: Cyberpunk / Electro • 128 BPM"
+      },
+      {
+        num: "03",
+        title: "LIVE DECK & AI DJ AUDIO ENGINE",
+        subtitle: "Continuous Web Audio Synthesizer & Visualizer",
+        points: [
+          "Click anywhere on the deck to initialize the Web Audio context",
+          "Harmonic Camelot Wheel system locks compatible musical keys",
+          "Dynamic waveform visualizers pulse to live simulated kick and bass"
+        ],
+        badge: "STEP 3 OF 6",
+        color: "#06B6D4",
+        accent: "#22D3EE",
+        url: "ai-dj-studio-nine.vercel.app/lounge/l_nexus1",
+        mockTitle: "Now Playing: Neon Horizon",
+        mockSub: "Key: 8A • 128 BPM • Energy: 0.82"
+      },
+      {
+        num: "04",
+        title: "CROWD QUEUE & HARMONIC UPVOTING",
+        subtitle: "Listeners Control the Setlist Collaboratively",
+        points: [
+          "Open the Queue drawer and click '+ Add Track' from 12 library songs",
+          "Click ▲ Upvote on candidate songs to reorder the playlist live",
+          "Compatible harmonic keys receive automatic acoustic priority"
+        ],
+        badge: "STEP 4 OF 6",
+        color: "#F59E0B",
+        accent: "#FBBF24",
+        url: "ai-dj-studio-nine.vercel.app/lounge/l_nexus1",
+        mockTitle: "Next: Cybernetic Pulse (VIP)",
+        mockSub: "Upvotes: +14 • Key: 9A (Harmonic Match)"
+      },
+      {
+        num: "05",
+        title: "SOUNDCLASH HEAD-TO-HEAD BATTLES",
+        subtitle: "30-Second Real-Time Crowd Voting Sprint",
+        points: [
+          "Host launches a Soundclash battle between two competing songs",
+          "Room members vote live with real-time countdown telemetry",
+          "The winning track immediately drops into the next queue slot"
+        ],
+        badge: "STEP 5 OF 6",
+        color: "#EF4444",
+        accent: "#F87171",
+        url: "ai-dj-studio-nine.vercel.app/lounge/l_nexus1",
+        mockTitle: "Track A vs Track B",
+        mockSub: "Live Battle: 00:14 Remaining • Votes: 62% vs 38%"
+      },
+      {
+        num: "06",
+        title: "CROWD SENTIMENT & TELEMETRY",
+        subtitle: "NLP Chat Sentiment & Acoustic Energy Analytics",
+        points: [
+          "Type hype messages in room chat to push crowd sentiment score up",
+          "Review the sentiment progression curve and peak listener count",
+          "Inspect most-voted tracks to analyze audience music affinity"
+        ],
+        badge: "STEP 6 OF 6",
+        color: "#10B981",
+        accent: "#34D399",
+        url: "ai-dj-studio-nine.vercel.app/analytics/l_nexus1",
+        mockTitle: "Average Sentiment: 0.84",
+        mockSub: "Status: Highly Energetic • Peak Listeners: 28"
+      }
+    ];
+
+    let currentSec = 0;
+    let animFrame = null;
+    let audioCtx = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playBeep(freq, duration = 0.08) {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function drawFrame(timeSec) {
+      const chapterIdx = Math.min(CHAPTERS.length - 1, Math.floor(timeSec / CHAPTER_LENGTH));
+      const chap = CHAPTERS[chapterIdx];
+      const timeInChap = timeSec % CHAPTER_LENGTH;
+      const progressInChap = timeInChap / CHAPTER_LENGTH;
+
+      // 1. Clear & Dark Sci-Fi Background
+      ctx.fillStyle = "#070A10";
+      ctx.fillRect(0, 0, 1280, 720);
+
+      // Subtle Gradient Radial Glows
+      const radGlow = ctx.createRadialGradient(250, 200, 10, 250, 200, 500);
+      radGlow.addColorStop(0, chap.color + "22");
+      radGlow.addColorStop(1, "transparent");
+      ctx.fillStyle = radGlow;
+      ctx.fillRect(0, 0, 1280, 720);
+
+      const radGlow2 = ctx.createRadialGradient(1050, 550, 10, 1050, 550, 500);
+      radGlow2.addColorStop(0, chap.accent + "18");
+      radGlow2.addColorStop(1, "transparent");
+      ctx.fillStyle = radGlow2;
+      ctx.fillRect(0, 0, 1280, 720);
+
+      // Cyber Grid Background Lines
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < 1280; x += 60) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 720);
+        ctx.stroke();
+      }
+      for (let y = 0; y < 720; y += 60) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(1280, y);
+        ctx.stroke();
+      }
+
+      // 2. Top Header Bar
+      ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+      ctx.fillRect(40, 30, 1200, 60);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.strokeRect(40, 30, 1200, 60);
+
+      // Title & Logo
+      ctx.font = "bold 20px system-ui, sans-serif";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText("AI DJ STUDIO", 70, 68);
+
+      ctx.font = "14px system-ui, sans-serif";
+      ctx.fillStyle = "#94A3B8";
+      ctx.fillText("— TUTORIAL & USER GUIDE", 220, 68);
+
+      // URL Pill
+      ctx.fillStyle = "rgba(99, 102, 241, 0.15)";
+      ctx.fillRect(800, 42, 340, 36);
+      ctx.strokeStyle = "rgba(99, 102, 241, 0.4)";
+      ctx.strokeRect(800, 42, 340, 36);
+
+      ctx.font = "13px monospace";
+      ctx.fillStyle = "#C7D2FE";
+      ctx.fillText(chap.url, 815, 65);
+
+      // Timer on Header
+      const min = Math.floor(timeSec / 60).toString().padStart(2, '0');
+      const sec = Math.floor(timeSec % 60).toString().padStart(2, '0');
+      ctx.font = "bold 15px monospace";
+      ctx.fillStyle = "#38BDF8";
+      ctx.fillText(`${min}:${sec} / 02:00`, 1150, 66);
+
+      // 3. Left Content Area (Chapter Details)
+      // Step Badge
+      ctx.fillStyle = chap.color + "33";
+      ctx.fillRect(70, 130, 160, 32);
+      ctx.strokeStyle = chap.color;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(70, 130, 160, 32);
+
+      ctx.font = "bold 13px system-ui, sans-serif";
+      ctx.fillStyle = chap.accent;
+      ctx.fillText(chap.badge, 95, 151);
+
+      // Chapter Title
+      ctx.font = "900 36px system-ui, sans-serif";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText(chap.title, 70, 205);
+
+      ctx.font = "600 18px system-ui, sans-serif";
+      ctx.fillStyle = chap.accent;
+      ctx.fillText(chap.subtitle, 70, 240);
+
+      // 3 Bullet Points
+      chap.points.forEach((pt, i) => {
+        const yPos = 295 + i * 55;
+        // Bullet circle
+        ctx.fillStyle = chap.color;
+        ctx.beginPath();
+        ctx.arc(80, yPos - 6, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.font = "17px system-ui, sans-serif";
+        ctx.fillStyle = "#E2E8F0";
+        ctx.fillText(pt, 105, yPos);
+      });
+
+      // 4. Right Area: Dynamic Interactive UI Mock Card
+      ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+      ctx.fillRect(720, 140, 490, 400);
+      ctx.strokeStyle = chap.color + "88";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(720, 140, 490, 400);
+
+      // Mock Header
+      ctx.fillStyle = "rgba(30, 41, 59, 0.8)";
+      ctx.fillRect(720, 140, 490, 45);
+      ctx.font = "bold 14px system-ui, sans-serif";
+      ctx.fillStyle = "#F8FAFC";
+      ctx.fillText("LIVE SYSTEM PREVIEW", 745, 168);
+
+      // Mock Body Info
+      ctx.fillStyle = "rgba(99, 102, 241, 0.08)";
+      ctx.fillRect(745, 210, 440, 90);
+      ctx.strokeStyle = "rgba(99, 102, 241, 0.25)";
+      ctx.strokeRect(745, 210, 440, 90);
+
+      ctx.font = "bold 20px system-ui, sans-serif";
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText(chap.mockTitle, 765, 248);
+
+      ctx.font = "14px monospace";
+      ctx.fillStyle = chap.accent;
+      ctx.fillText(chap.mockSub, 765, 278);
+
+      // Dynamic Audio Waveform in the Mock Card
+      ctx.fillStyle = "rgba(10, 15, 26, 0.9)";
+      ctx.fillRect(745, 320, 440, 120);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.strokeRect(745, 320, 440, 120);
+
+      const numBars = 36;
+      const barWidth = 8;
+      const gap = 4;
+      for (let b = 0; b < numBars; b++) {
+        const freqWave = Math.sin(timeSec * 6 + b * 0.4) * 0.5 + 0.5;
+        const barH = 15 + freqWave * 75;
+        ctx.fillStyle = b % 2 === 0 ? chap.color : chap.accent;
+        ctx.fillRect(765 + b * (barWidth + gap), 430 - barH, barWidth, barH);
+      }
+
+      // Mock Status Pill
+      ctx.fillStyle = "#10B98122";
+      ctx.fillRect(745, 460, 440, 40);
+      ctx.strokeStyle = "#10B98188";
+      ctx.strokeRect(745, 460, 440, 40);
+      ctx.font = "bold 13px system-ui, sans-serif";
+      ctx.fillStyle = "#34D399";
+      ctx.fillText("● Real-Time Acoustic Engine: Synchronized", 765, 485);
+
+      // 5. Bottom Progress Scrubber Bar
+      ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+      ctx.fillRect(40, 620, 1200, 60);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.strokeRect(40, 620, 1200, 60);
+
+      // Full Timeline Track
+      ctx.fillStyle = "#1E293B";
+      ctx.fillRect(60, 645, 1160, 10);
+
+      // Elapsed Progress Fill
+      const totalProg = (timeSec / TOTAL_SECONDS) * 1160;
+      const progGrad = ctx.createLinearGradient(60, 0, 1220, 0);
+      progGrad.addColorStop(0, "#6366F1");
+      progGrad.addColorStop(0.5, "#A855F7");
+      progGrad.addColorStop(1, "#EC4899");
+      ctx.fillStyle = progGrad;
+      ctx.fillRect(60, 645, totalProg, 10);
+
+      // Scrubber Head
+      ctx.fillStyle = "#FFFFFF";
+      ctx.beginPath();
+      ctx.arc(60 + totalProg, 650, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Chapter markers
+      for (let c = 1; c < 6; c++) {
+        const markerX = 60 + (c / 6) * 1160;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+        ctx.fillRect(markerX, 642, 2, 16);
+      }
+    }
+
+    // Interactive Loop
+    let startTime = null;
+    let playing = false;
+
+    function loop(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const elapsed = (timestamp - startTime) / 1000;
+      currentSec = Math.min(TOTAL_SECONDS, elapsed);
+
+      drawFrame(currentSec);
+
+      // Update UI Progress
+      const percent = (currentSec / TOTAL_SECONDS) * 100;
+      document.getElementById('videoProgressBar').style.width = percent + '%';
+      
+      const m = Math.floor(currentSec / 60).toString().padStart(2, '0');
+      const s = Math.floor(currentSec % 60).toString().padStart(2, '0');
+      document.getElementById('timeElapsed').textContent = `${m}:${s}`;
+
+      // Chapter sound beep transitions
+      if (Math.floor(currentSec) % 20 === 0 && Math.floor(currentSec) > 0) {
+        playBeep(440, 0.05);
+      }
+
+      if (currentSec < TOTAL_SECONDS && playing) {
+        animFrame = requestAnimationFrame(loop);
+      } else if (currentSec >= TOTAL_SECONDS) {
+        playing = false;
+        document.getElementById('statusLabel').textContent = "Completed (02:00)";
+        document.getElementById('startOverlay').classList.remove('hidden');
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+        }
+      }
+    }
+
+    document.getElementById('renderPlayBtn').addEventListener('click', () => {
+      initAudio();
+      document.getElementById('startOverlay').classList.add('hidden');
+      document.getElementById('statusLabel').textContent = "Playing Video";
+      playing = true;
+      startTime = null;
+      animFrame = requestAnimationFrame(loop);
+    });
+
+    document.getElementById('recordDownloadBtn').addEventListener('click', () => {
+      initAudio();
+      document.getElementById('startOverlay').classList.add('hidden');
+      document.getElementById('statusLabel').textContent = "Recording 1080p Video...";
+      document.getElementById('recordingBadge').classList.remove('hidden');
+
+      recordedChunks = [];
+      const stream = canvas.captureStream(30); // 30 FPS
+      
+      // Determine supported mime type
+      let mimeType = 'video/webm;codecs=vp9';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm';
+      }
+
+      mediaRecorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 3000000 });
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'how_to_use_ai_dj_studio_2min.webm';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+        document.getElementById('statusLabel').textContent = "Video Exported Successfully!";
+        document.getElementById('recordingBadge').classList.add('hidden');
+      };
+
+      mediaRecorder.start();
+      playing = true;
+      startTime = null;
+      animFrame = requestAnimationFrame(loop);
+    });
+
+    // Render initial poster frame
+    drawFrame(0);
+  </script>
+</body>
+</html>
