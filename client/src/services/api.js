@@ -8,7 +8,7 @@
 import { MOCK_TRACKS, MOCK_USERS, MOCK_LOUNGES, MOCK_MESSAGES } from './mockData.js';
 
 function getInitialBaseUrl() {
-  const envUrl = import.meta.env.VITE_API_URL;
+  const envUrl = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_URL) || undefined;
   const isLocalHost = typeof window !== 'undefined' && (
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1'
@@ -82,7 +82,7 @@ class ApiClient {
   }
 
   async request(endpoint, options = {}) {
-    const envUrl = import.meta.env.VITE_API_URL;
+    const envUrl = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_API_URL) || undefined;
     const hasExternalApi = envUrl && envUrl.startsWith('http') && !envUrl.includes('localhost');
 
     // On remote deployment (e.g. Vercel) without external public API configured, use fallback directly

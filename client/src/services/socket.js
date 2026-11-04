@@ -145,7 +145,7 @@ class SocketService {
       window.location.hostname === 'localhost' ||
       window.location.hostname === '127.0.0.1'
     );
-    const envSocketUrl = import.meta.env.VITE_SOCKET_URL;
+    const envSocketUrl = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_SOCKET_URL) || undefined;
 
     // If on a remote static deployment (e.g. Vercel) and no external WebSocket server is configured
     if (!isLocalhost && (!envSocketUrl || envSocketUrl.includes('localhost'))) {
