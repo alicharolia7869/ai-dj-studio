@@ -191,7 +191,7 @@ export default function CreateLoungePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <label className="block text-slate-300 font-medium mb-1">
-                  BPM Tolerance: ±{(bpmTolerance * 100).toFixed(0)}%
+                  BPM Tolerance: ±{(((Number.isFinite(Number(bpmTolerance)) ? Number(bpmTolerance) : 0.08) * 100).toFixed(0))}%
                 </label>
                 <input
                   type="range"

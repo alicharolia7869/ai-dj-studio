@@ -152,115 +152,126 @@ class AudioEngine {
   }
 
   _playBeatStep(step, rootFreq) {
-    if (!this.audioCtx || !this.masterGain) return;
+    if (!this.audioCtx || !this.masterGain || this.audioCtx.state === 'closed') return;
     const now = this.audioCtx.currentTime;
 
-    // 1. Kick on beats 0, 4, 8, 12 (4-on-the-floor)
-    if (step % 4 === 0) {
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(130, now);
-      osc.frequency.exponentialRampToValueAtTime(45, now + 0.12);
-      gain.gain.setValueAtTime(0.7, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-      osc.connect(gain);
-      gain.connect(this.masterGain);
-      osc.onended = () => {
-        try {
-          osc.disconnect();
-          gain.disconnect();
-        } catch (_) {}
-      };
-      osc.start(now);
-      osc.stop(now + 0.2);
-    }
+    try {
+      // 1. Kick on beats 0, 4, 8, 12 (4-on-the-floor)
+      if (step % 4 === 0) {
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(130, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.12);
+        gain.gain.setValueAtTime(0.7, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.onended = () => {
+          try {
+            osc.disconnect();
+            gain.disconnect();
+          } catch (_) {}
+        };
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
 
-    // 2. Snare / Clap on beats 4 and 12 (backbeat)
-    if (step === 4 || step === 12) {
-      const noise = this._createSnareNoise();
-      const gain = this.audioCtx.createGain();
-      gain.gain.setValueAtTime(0.35, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-      noise.connect(gain);
-      gain.connect(this.masterGain);
-      noise.onended = () => {
-        try {
-          noise.disconnect();
-          gain.disconnect();
-        } catch (_) {}
-      };
-      noise.start(now);
-      noise.stop(now + 0.16);
-    }
+      // 2. Snare / Clap on beats 4 and 12 (backbeat)
+      if (step === 4 || step === 12) {
+        const noise = this._createSnareNoise();
+        if (noise) {
+          const gain = this.audioCtx.createGain();
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+          noise.connect(gain);
+          gain.connect(this.masterGain);
+          noise.onended = () => {
+            try {
+              noise.disconnect();
+              gain.disconnect();
+            } catch (_) {}
+          };
+          noise.start(now);
+          noise.stop(now + 0.16);
+        }
+      }
 
-    // 3. Hi-Hats on offbeat 2, 6, 10, 14
-    if (step % 2 === 1) {
-      const hat = this._createSnareNoise();
-      const gain = this.audioCtx.createGain();
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-      hat.connect(gain);
-      gain.connect(this.masterGain);
-      hat.onended = () => {
-        try {
-          hat.disconnect();
-          gain.disconnect();
-        } catch (_) {}
-      };
-      hat.start(now);
-      hat.stop(now + 0.06);
-    }
+      // 3. Hi-Hats on offbeat 2, 6, 10, 14
+      if (step % 2 === 1) {
+        const hat = this._createSnareNoise();
+        if (hat) {
+          const gain = this.audioCtx.createGain();
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+          hat.connect(gain);
+          gain.connect(this.masterGain);
+          hat.onended = () => {
+            try {
+              hat.disconnect();
+              gain.disconnect();
+            } catch (_) {}
+          };
+          hat.start(now);
+          hat.stop(now + 0.06);
+        }
+      }
 
-    // 4. Bassline melodic synth on steps 2, 6, 8, 14
-    if ([2, 6, 8, 14].includes(step)) {
-      const bass = this.audioCtx.createOscillator();
-      const filter = this.audioCtx.createBiquadFilter();
-      const gain = this.audioCtx.createGain();
+      // 4. Bassline melodic synth on steps 2, 6, 8, 14
+      if ([2, 6, 8, 14].includes(step)) {
+        const bass = this.audioCtx.createOscillator();
+        const filter = this.audioCtx.createBiquadFilter();
+        const gain = this.audioCtx.createGain();
 
-      bass.type = 'sawtooth';
-      const semitoneOffset = step === 8 ? 7 : step === 14 ? 3 : 0;
-      const freq = rootFreq * Math.pow(2, semitoneOffset / 12);
-      bass.frequency.setValueAtTime(freq, now);
+        bass.type = 'sawtooth';
+        const semitoneOffset = step === 8 ? 7 : step === 14 ? 3 : 0;
+        const freq = rootFreq * Math.pow(2, semitoneOffset / 12);
+        bass.frequency.setValueAtTime(freq, now);
 
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(600, now);
-      filter.frequency.exponentialRampToValueAtTime(180, now + 0.18);
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(600, now);
+        filter.frequency.exponentialRampToValueAtTime(180, now + 0.18);
 
-      gain.gain.setValueAtTime(0.4, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
 
-      bass.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.masterGain);
-      bass.onended = () => {
-        try {
-          bass.disconnect();
-          filter.disconnect();
-          gain.disconnect();
-        } catch (_) {}
-      };
-      bass.start(now);
-      bass.stop(now + 0.22);
-    }
+        bass.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        bass.onended = () => {
+          try {
+            bass.disconnect();
+            filter.disconnect();
+            gain.disconnect();
+          } catch (_) {}
+        };
+        bass.start(now);
+        bass.stop(now + 0.22);
+      }
+    } catch (_) {}
   }
 
   _createSnareNoise() {
-    const bufferSize = this.audioCtx.sampleRate * 0.1;
-    const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
+    if (!this.audioCtx) return null;
+    try {
+      const bufferSize = Math.floor(this.audioCtx.sampleRate * 0.1);
+      const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = this.audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      return noise;
+    } catch (_) {
+      return null;
     }
-    const noise = this.audioCtx.createBufferSource();
-    noise.buffer = buffer;
-    return noise;
   }
 
   pause() {
     this.isPlaying = false;
     if (this.htmlAudio) {
-      this.htmlAudio.pause();
+      try { this.htmlAudio.pause(); } catch (_) {}
     }
     if (this.synthInterval) {
       clearInterval(this.synthInterval);
@@ -270,9 +281,10 @@ class AudioEngine {
 
   resume() {
     if (!this.currentTrack) return;
+    this._initContext();
     this.isPlaying = true;
     if (this.htmlAudio) {
-      this.htmlAudio.play();
+      try { this.htmlAudio.play().catch(() => {}); } catch (_) {}
     } else {
       this._startSynthPlayback(this.currentTrack, this.currentTime);
     }
@@ -301,8 +313,10 @@ class AudioEngine {
   stop() {
     this.isPlaying = false;
     if (this.htmlAudio) {
-      this.htmlAudio.pause();
-      this.htmlAudio.src = '';
+      try {
+        this.htmlAudio.pause();
+        this.htmlAudio.src = '';
+      } catch (_) {}
       this.htmlAudio = null;
     }
     if (this.audioSourceNode) {

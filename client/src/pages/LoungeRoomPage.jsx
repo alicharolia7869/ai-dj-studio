@@ -114,7 +114,32 @@ export default function LoungeRoomPage() {
     if (lounge?.inviteCode) {
       const shareUrl = `${window.location.origin}/lounge/${lounge._id}`;
       if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(shareUrl).catch(() => {});
+        navigator.clipboard.writeText(shareUrl).catch(() => {
+          // In case permission was denied, attempt fallback
+          try {
+            const textArea = document.createElement('textarea');
+            textArea.value = shareUrl;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+          } catch (_) {}
+        });
+      } else {
+        try {
+          const textArea = document.createElement('textarea');
+          textArea.value = shareUrl;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-999999px';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+        } catch (_) {}
       }
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2000);
@@ -315,7 +340,7 @@ export default function LoungeRoomPage() {
                   </div>
                   <div>
                     <span className="text-slate-500 block text-[9px]">ENERGY</span>
-                    <span className="text-violet-300 font-bold">{((currentAcoustic.energy ?? 0.75) * 100).toFixed(0)}%</span>
+                    <span className="text-violet-300 font-bold">{(((Number.isFinite(Number(currentAcoustic.energy)) ? Number(currentAcoustic.energy) : 0.75) * 100).toFixed(0))}%</span>
                   </div>
                 </div>
               </div>

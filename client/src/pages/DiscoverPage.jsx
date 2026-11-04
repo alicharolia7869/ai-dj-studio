@@ -255,7 +255,7 @@ export default function DiscoverPage() {
                       <div className="flex items-center gap-2.5 mt-2 text-xs font-mono">
                         <span className="text-cyan-400 font-semibold">{profile.bpm} BPM</span>
                         <span className="text-slate-600">•</span>
-                        <span className="text-violet-400">Energy {((profile.energy ?? 0.7) * 100).toFixed(0)}%</span>
+                        <span className="text-violet-400">Energy {(((Number.isFinite(Number(profile.energy)) ? Number(profile.energy) : 0.7) * 100).toFixed(0))}%</span>
                       </div>
                     </div>
                   </div>

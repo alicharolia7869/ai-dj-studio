@@ -3,10 +3,10 @@ import { Flame, TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
 
 export default function SentimentGauge({ sentiment, compact = false }) {
   const rawScore = sentiment?.score;
-  const score = typeof rawScore === 'number' ? rawScore : (Number(rawScore) || 0);
+  const score = Number.isFinite(Number(rawScore)) ? Number(rawScore) : 0;
   const category = sentiment?.category || 'Neutral';
   const trend = sentiment?.trend || 'steady';
-  const sampleSize = sentiment?.sampleSize ?? 0;
+  const sampleSize = Number.isFinite(Number(sentiment?.sampleSize)) ? Number(sentiment.sampleSize) : 0;
 
   // Convert -1.0..+1.0 into 0..100% for progress gauge
   const percentage = Math.round(((score + 1) / 2) * 100);

@@ -151,7 +151,7 @@ export default function ProfilePage() {
 
             <div>
               <label className="block text-xs font-mono text-slate-400 mb-1">
-                Target Energy: {(energy * 100).toFixed(0)}%
+                Target Energy: {(((Number.isFinite(Number(energy)) ? Number(energy) : 0.8) * 100).toFixed(0))}%
               </label>
               <input
                 type="range"

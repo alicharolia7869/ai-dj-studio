@@ -168,7 +168,7 @@ export default function DashboardPage() {
 
         <div className="bg-[#11111a] border border-white/10 rounded-2xl p-4">
           <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block mb-1">Target Energy</span>
-          <p className="text-sm font-bold text-violet-300 font-mono">{((preferences.preferredEnergy ?? 0.75) * 100).toFixed(0)}% Drive</p>
+          <p className="text-sm font-bold text-violet-300 font-mono">{(((Number.isFinite(Number(preferences.preferredEnergy)) ? Number(preferences.preferredEnergy) : 0.75) * 100).toFixed(0))}% Drive</p>
         </div>
 
         <div className="bg-[#11111a] border border-white/10 rounded-2xl p-4">

@@ -285,6 +285,12 @@ export const useLoungeStore = create((set, get) => ({
     if (!loungeId) return;
     const socket = socketService.getSocket();
     socket.emit('soundclash:create', { loungeId, candidateTrackIds, durationSeconds });
+    try {
+      const res = await api.createBattle(loungeId, { candidateTrackIds, durationSeconds });
+      if (res.data?.battle) {
+        set({ activeBattle: res.data.battle });
+      }
+    } catch (_) {}
   },
 
   voteSoundclash: async (battleId, candidateTrackId) => {
@@ -292,6 +298,12 @@ export const useLoungeStore = create((set, get) => ({
     if (!loungeId) return;
     const socket = socketService.getSocket();
     socket.emit('soundclash:vote', { loungeId, battleId, candidateTrackId });
+    try {
+      const res = await api.voteBattle(loungeId, battleId, candidateTrackId);
+      if (res.data?.battle) {
+        set({ activeBattle: res.data.battle });
+      }
+    } catch (_) {}
   },
 
   resolveSoundclash: async (battleId, tieBreakerTrackId) => {
@@ -299,6 +311,16 @@ export const useLoungeStore = create((set, get) => ({
     if (!loungeId) return;
     const socket = socketService.getSocket();
     socket.emit('soundclash:resolve', { loungeId, battleId, tieBreakerTrackId });
+    try {
+      const res = await api.resolveBattle(loungeId, battleId, tieBreakerTrackId);
+      if (res.data) {
+        set({
+          activeBattle: res.data.battle || null,
+          queue: res.data.queue || get().queue,
+          aiAnnouncement: 'Soundclash winner announced and placed at top of queue!'
+        });
+      }
+    } catch (_) {}
   },
 
   askAiDj: async (question) => {

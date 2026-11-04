@@ -24,6 +24,7 @@ export default function AdminTracksPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingTrackId, setEditingTrackId] = useState(null);
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
 
   // Add Track Form State
@@ -57,6 +58,22 @@ export default function AdminTracksPage() {
     loadTracks();
   }, [search]);
 
+  const handleOpenEdit = (t) => {
+    setEditingTrackId(t._id);
+    setTitle(t.title || '');
+    setArtist(t.artist || '');
+    setGenre(t.genre || 'Melodic Techno');
+    setDuration(t.duration || 210);
+    setBpm(t.acousticProfile?.bpm || t.bpm || 126);
+    setCamelotKey(t.acousticProfile?.camelotKey || t.camelotKey || '8A');
+    setEnergy(t.acousticProfile?.energy ?? 0.8);
+    setValence(t.acousticProfile?.valence ?? 0.65);
+    setArtworkUrl(t.artworkUrl || '');
+    setAudioUrl(t.audioUrl || '');
+    setAudioFile(null);
+    setShowAddModal(true);
+  };
+
   const handleAddTrack = async (e) => {
     e.preventDefault();
     setStatusMsg({ text: '', type: '' });
@@ -75,33 +92,48 @@ export default function AdminTracksPage() {
 
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('title', title);
-      formData.append('artist', artist);
-      formData.append('genre', genre);
-      formData.append('duration', String(duration));
-      formData.append('bpm', String(numBpm));
-      formData.append('camelotKey', camelotKey.toUpperCase());
-      formData.append('energy', String(energy));
-      formData.append('valence', String(valence));
-      if (artworkUrl) formData.append('artworkUrl', artworkUrl);
-      if (audioUrl) formData.append('audioUrl', audioUrl);
-      if (audioFile) formData.append('audio', audioFile);
+      if (editingTrackId) {
+        await api.updateTrack(editingTrackId, {
+          title,
+          artist,
+          genre,
+          duration: Number(duration),
+          bpm: numBpm,
+          camelotKey: camelotKey.toUpperCase(),
+          energy: Number(energy),
+          valence: Number(valence),
+          artworkUrl: artworkUrl || undefined
+        });
+        setStatusMsg({ text: `Track "${title}" successfully updated in catalog!`, type: 'success' });
+      } else {
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('artist', artist);
+        formData.append('genre', genre);
+        formData.append('duration', String(duration));
+        formData.append('bpm', String(numBpm));
+        formData.append('camelotKey', camelotKey.toUpperCase());
+        formData.append('energy', String(energy));
+        formData.append('valence', String(valence));
+        if (artworkUrl) formData.append('artworkUrl', artworkUrl);
+        if (audioUrl) formData.append('audioUrl', audioUrl);
+        if (audioFile) formData.append('audio', audioFile);
 
-      if (timelineNotes) {
-        formData.append('metadataTimeline', JSON.stringify([
-          { timestamp: 0, note: 'Intro' },
-          { timestamp: 32, note: timelineNotes }
-        ]));
+        if (timelineNotes) {
+          formData.append('metadataTimeline', JSON.stringify([
+            { timestamp: 0, note: 'Intro' },
+            { timestamp: 32, note: timelineNotes }
+          ]));
+        }
+
+        await api.createTrack(formData);
+        setStatusMsg({ text: `Track "${title}" successfully added to catalog!`, type: 'success' });
       }
-
-      await api.createTrack(formData);
-      setStatusMsg({ text: `Track "${title}" successfully added to catalog!`, type: 'success' });
       setShowAddModal(false);
       resetForm();
       loadTracks();
     } catch (err) {
-      setStatusMsg({ text: err.message || 'Failed to create track.', type: 'error' });
+      setStatusMsg({ text: err.message || 'Failed to save track.', type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -119,6 +151,7 @@ export default function AdminTracksPage() {
   };
 
   const resetForm = () => {
+    setEditingTrackId(null);
     setTitle('');
     setArtist('');
     setGenre('Melodic Techno');
@@ -228,17 +261,26 @@ export default function AdminTracksPage() {
                   </td>
 
                   <td className="py-3 px-4 font-mono text-violet-300">
-                    {((t.acousticProfile?.energy ?? 0.7) * 100).toFixed(0)}%
+                    {(((Number.isFinite(Number(t.acousticProfile?.energy)) ? Number(t.acousticProfile.energy) : 0.7) * 100).toFixed(0))}%
                   </td>
 
                   <td className="py-3 px-4 text-right">
-                    <button
-                      onClick={() => handleDelete(t._id, t.title)}
-                      className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors"
-                      title="Delete track from catalog"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => handleOpenEdit(t)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+                        title="Edit track"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(t._id, t.title)}
+                        className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors"
+                        title="Delete track from catalog"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -252,7 +294,7 @@ export default function AdminTracksPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="bg-[#12121a] border border-white/10 rounded-3xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-base font-bold text-white mb-4 font-display">
-              Add Verified Track to Catalog
+              {editingTrackId ? 'Edit Catalog Track' : 'Add Verified Track to Catalog'}
             </h3>
 
             <form onSubmit={handleAddTrack} className="space-y-4 text-xs">
@@ -342,7 +384,7 @@ export default function AdminTracksPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-400 font-mono mb-1">Energy: {(energy * 100).toFixed(0)}%</label>
+                    <label className="block text-slate-400 font-mono mb-1">Energy: {(((Number.isFinite(Number(energy)) ? Number(energy) : 0.8) * 100).toFixed(0))}%</label>
                     <input
                       type="range"
                       min="0.1"
@@ -354,7 +396,7 @@ export default function AdminTracksPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-400 font-mono mb-1">Valence: {(valence * 100).toFixed(0)}%</label>
+                    <label className="block text-slate-400 font-mono mb-1">Valence: {(((Number.isFinite(Number(valence)) ? Number(valence) : 0.65) * 100).toFixed(0))}%</label>
                     <input
                       type="range"
                       min="0.1"
@@ -406,7 +448,7 @@ export default function AdminTracksPage() {
                   disabled={submitting}
                   className="bg-gradient-to-r from-violet-600 to-cyan-500 text-white font-bold px-5 py-2 rounded-xl shadow-lg disabled:opacity-50"
                 >
-                  {submitting ? 'Validating...' : 'Save Track'}
+                  {submitting ? 'Validating...' : (editingTrackId ? 'Update Track' : 'Save Track')}
                 </button>
               </div>
             </form>

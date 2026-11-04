@@ -210,7 +210,7 @@ export default function RegisterPage() {
 
               <div>
                 <label className="block text-xs font-mono text-slate-400 mb-1">
-                  Energy Level: {(energy * 100).toFixed(0)}%
+                  Energy Level: {(((Number.isFinite(Number(energy)) ? Number(energy) : 0.8) * 100).toFixed(0))}%
                 </label>
                 <input
                   type="range"

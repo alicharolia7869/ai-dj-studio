@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
             <span>Return to Live Lounge</span>
           </Link>
           <h1 className="text-3xl font-black text-white font-display">
-            Session Analytics: {analytics.loungeName}
+            Session Analytics: {analytics.loungeName || 'Nexus Club Floor'}
           </h1>
           <p className="text-xs text-slate-400 mt-1">
             Recorded acoustic telemetry, sentiment curve, and crowd engagement metrics.
@@ -88,7 +88,7 @@ export default function AnalyticsPage() {
 
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-mono uppercase px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 font-bold">
-            {analytics.vibeProfile}
+            {analytics.vibeProfile || 'Deep House'}
           </span>
           <span className="text-[10px] font-mono uppercase px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
             {analytics.isLiveSession ? 'Live Stream' : 'Completed Session'}
@@ -101,31 +101,31 @@ export default function AnalyticsPage() {
         <div className="bg-[#11111a] border border-white/10 rounded-2xl p-4">
           <Clock className="w-4 h-4 text-cyan-400 mb-2" />
           <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Duration</span>
-          <p className="text-lg font-black text-white font-mono mt-0.5">{analytics.sessionDuration}m</p>
+          <p className="text-lg font-black text-white font-mono mt-0.5">{Number(analytics.sessionDuration) || 45}m</p>
         </div>
 
         <div className="bg-[#11111a] border border-white/10 rounded-2xl p-4">
           <Users className="w-4 h-4 text-violet-400 mb-2" />
           <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Peak Listeners</span>
-          <p className="text-lg font-black text-white font-mono mt-0.5">{analytics.peakParticipants}</p>
+          <p className="text-lg font-black text-white font-mono mt-0.5">{Number(analytics.peakParticipants) || 0}</p>
         </div>
 
         <div className="bg-[#11111a] border border-white/10 rounded-2xl p-4">
           <Music className="w-4 h-4 text-cyan-400 mb-2" />
           <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Tracks Played</span>
-          <p className="text-lg font-black text-white font-mono mt-0.5">{analytics.totalTracksPlayed}</p>
+          <p className="text-lg font-black text-white font-mono mt-0.5">{Number(analytics.totalTracksPlayed) || 0}</p>
         </div>
 
         <div className="bg-[#11111a] border border-white/10 rounded-2xl p-4">
           <ThumbsUp className="w-4 h-4 text-emerald-400 mb-2" />
           <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Queue Votes</span>
-          <p className="text-lg font-black text-white font-mono mt-0.5">{analytics.totalQueueVotes}</p>
+          <p className="text-lg font-black text-white font-mono mt-0.5">{Number(analytics.totalQueueVotes) || 0}</p>
         </div>
 
         <div className="bg-[#11111a] border border-white/10 rounded-2xl p-4">
           <Swords className="w-4 h-4 text-amber-400 mb-2" />
           <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Soundclashes</span>
-          <p className="text-lg font-black text-white font-mono mt-0.5">{analytics.soundclashCount}</p>
+          <p className="text-lg font-black text-white font-mono mt-0.5">{Number(analytics.soundclashCount) || 0}</p>
         </div>
 
         <div className="bg-[#11111a] border border-white/10 rounded-2xl p-4">
@@ -133,7 +133,7 @@ export default function AnalyticsPage() {
           <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Avg Sentiment</span>
           <p className="text-lg font-black text-white font-mono mt-0.5">
             {(() => {
-              const val = typeof analytics.averageSentiment === 'number' ? analytics.averageSentiment : (Number(analytics.averageSentiment) || 0);
+              const val = Number.isFinite(Number(analytics?.averageSentiment)) ? Number(analytics.averageSentiment) : 0;
               return val > 0 ? `+${val.toFixed(2)}` : val.toFixed(2);
             })()}
           </p>
