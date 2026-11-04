@@ -2,7 +2,8 @@ import React from 'react';
 import { Flame, TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
 
 export default function SentimentGauge({ sentiment, compact = false }) {
-  const score = sentiment?.score ?? 0;
+  const rawScore = sentiment?.score;
+  const score = typeof rawScore === 'number' ? rawScore : (Number(rawScore) || 0);
   const category = sentiment?.category || 'Neutral';
   const trend = sentiment?.trend || 'steady';
   const sampleSize = sentiment?.sampleSize ?? 0;

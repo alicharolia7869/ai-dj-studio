@@ -166,6 +166,11 @@ class ApiClient {
     let body = {};
     if (options.body && typeof options.body === 'string') {
       try { body = JSON.parse(options.body); } catch (_) {}
+    } else if (options.body && typeof FormData !== 'undefined' && options.body instanceof FormData) {
+      body = {};
+      for (const [k, v] of options.body.entries()) {
+        body[k] = v;
+      }
     }
 
     // 1. Auth Login
@@ -304,15 +309,98 @@ class ApiClient {
       return { success: true, data: { track } };
     }
 
+    // 5b. Create Track (Admin)
+    if (endpoint === '/tracks' && method === 'POST') {
+      const numBpm = Number(body.bpm) || 126;
+      const key = (body.camelotKey || '8A').toUpperCase();
+      const newTrack = {
+        _id: 't_' + Date.now(),
+        title: body.title || 'Untitled Track',
+        artist: body.artist || 'Unknown Artist',
+        genre: body.genre || 'Melodic Techno',
+        duration: Number(body.duration) || 210,
+        artworkUrl: body.artworkUrl || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80',
+        audioUrl: body.audioUrl || '',
+        acousticProfile: {
+          bpm: numBpm,
+          camelotKey: key,
+          energy: Number(body.energy) || 0.8,
+          valence: Number(body.valence) || 0.65,
+          danceability: 0.85
+        },
+        metadataTimeline: [
+          { timestamp: 0, note: 'Intro' },
+          { timestamp: 32, note: 'Main Groove' }
+        ],
+        isDemoTrack: false
+      };
+
+      let storedTracks = JSON.parse(localStorage.getItem('aidj_sim_tracks') || 'null');
+      if (!Array.isArray(storedTracks) || storedTracks.length === 0) {
+        storedTracks = [...MOCK_TRACKS];
+      }
+      storedTracks.unshift(newTrack);
+      localStorage.setItem('aidj_sim_tracks', JSON.stringify(storedTracks));
+
+      return {
+        success: true,
+        message: 'Track created successfully.',
+        data: { track: newTrack }
+      };
+    }
+
+    // 5c. Delete Track (Admin)
+    if (endpoint.startsWith('/tracks/') && method === 'DELETE') {
+      const trackId = endpoint.split('/')[2];
+      let storedTracks = JSON.parse(localStorage.getItem('aidj_sim_tracks') || 'null');
+      if (!Array.isArray(storedTracks) || storedTracks.length === 0) {
+        storedTracks = [...MOCK_TRACKS];
+      }
+      storedTracks = storedTracks.filter(t => t._id !== trackId);
+      localStorage.setItem('aidj_sim_tracks', JSON.stringify(storedTracks));
+      return { success: true, message: 'Track deleted successfully.' };
+    }
+
+    // 5d. Update Track (Admin)
+    if (endpoint.startsWith('/tracks/') && method === 'PATCH') {
+      const trackId = endpoint.split('/')[2];
+      let storedTracks = JSON.parse(localStorage.getItem('aidj_sim_tracks') || 'null');
+      if (!Array.isArray(storedTracks) || storedTracks.length === 0) {
+        storedTracks = [...MOCK_TRACKS];
+      }
+      const idx = storedTracks.findIndex(t => t._id === trackId);
+      if (idx !== -1) {
+        storedTracks[idx] = { ...storedTracks[idx], ...body };
+        localStorage.setItem('aidj_sim_tracks', JSON.stringify(storedTracks));
+        return { success: true, data: { track: storedTracks[idx] } };
+      }
+      return { success: true, message: 'Track updated.' };
+    }
+
     // 6. Lounges list
-    if (endpoint.startsWith('/lounges') && method === 'GET' && !endpoint.includes('/queue') && !endpoint.includes('/messages') && !endpoint.includes('/sentiment')) {
+    if (endpoint.startsWith('/lounges') && method === 'GET' && !endpoint.includes('/queue') && !endpoint.includes('/messages') && !endpoint.includes('/sentiment') && !endpoint.includes('/soundclash')) {
       const pathParts = endpoint.split('?')[0].split('/');
       const lounges = JSON.parse(localStorage.getItem('aidj_sim_lounges') || 'null') || MOCK_LOUNGES;
 
       if (pathParts.length > 2 && pathParts[2]) {
         // Single lounge by ID or inviteCode
-        const idOrCode = pathParts[2].toUpperCase();
-        const lounge = lounges.find(l => l._id === pathParts[2] || l.inviteCode === idOrCode) || lounges[0];
+        const query = pathParts[2];
+        const idOrCode = query.toUpperCase();
+        const lounge = lounges.find(l =>
+          l._id === query ||
+          (l.inviteCode && l.inviteCode.toUpperCase() === idOrCode) ||
+          l._id.toLowerCase() === query.toLowerCase()
+        );
+
+        if (!lounge) {
+          if (query.toLowerCase() === 'l_nexus1') {
+            return { success: true, data: { lounge: lounges[0] } };
+          }
+          const notFoundErr = new Error(`DJ Lounge "${query}" not found.`);
+          notFoundErr.status = 404;
+          throw notFoundErr;
+        }
+
         return { success: true, data: { lounge } };
       }
 
@@ -325,6 +413,9 @@ class ApiClient {
     // 7. Create Lounge
     if (endpoint === '/lounges' && method === 'POST') {
       const user = JSON.parse(localStorage.getItem('aidj_user') || 'null') || MOCK_USERS[0];
+      const storedTracks = JSON.parse(localStorage.getItem('aidj_sim_tracks') || 'null') || MOCK_TRACKS;
+      const initialTrack = (body.startingTrackId && (storedTracks.find(t => t._id === body.startingTrackId) || MOCK_TRACKS.find(t => t._id === body.startingTrackId))) || storedTracks[0] || MOCK_TRACKS[0];
+
       const newLounge = {
         _id: 'l_' + Date.now(),
         name: body.name || 'New DJ Lounge',
@@ -341,7 +432,7 @@ class ApiClient {
         status: 'active',
         host: user,
         currentTrack: {
-          track: MOCK_TRACKS[0],
+          track: initialTrack,
           startedAt: new Date().toISOString(),
           isPlaying: true,
           playbackPosition: 0,
@@ -350,12 +441,12 @@ class ApiClient {
         queue: [
           {
             _id: 'q_init1',
-            track: MOCK_TRACKS[1],
+            track: storedTracks[1] || MOCK_TRACKS[1],
             addedBy: user,
             addedAt: new Date().toISOString(),
             votes: [],
             score: 0,
-            recommendationReason: 'Identical Key (8A), 124 BPM (1.6% diff), smooth transition.'
+            recommendationReason: `Identical/Adjacent Key harmonic match. Smooth BPM segue.`
           }
         ],
         participants: [{ user, role: 'host' }]
@@ -371,7 +462,22 @@ class ApiClient {
     // 8. Queue operations
     if (endpoint.includes('/queue')) {
       const lounges = JSON.parse(localStorage.getItem('aidj_sim_lounges') || 'null') || MOCK_LOUNGES;
-      const lounge = lounges[0];
+      const pathParts = endpoint.split('?')[0].split('/');
+      const loungeId = pathParts[2];
+      const lounge = lounges.find(l => l._id === loungeId || l.inviteCode === loungeId) || lounges[0];
+
+      if (method === 'PATCH' && endpoint.includes('/reorder')) {
+        const reorderedIds = body.reorderedQueueIds || [];
+        if (Array.isArray(reorderedIds) && lounge.queue) {
+          lounge.queue.sort((a, b) => {
+            const aId = a.track?._id || a._id;
+            const bId = b.track?._id || b._id;
+            return reorderedIds.indexOf(aId) - reorderedIds.indexOf(bId);
+          });
+          localStorage.setItem('aidj_sim_lounges', JSON.stringify(lounges));
+        }
+        return { success: true, data: { queue: lounge.queue } };
+      }
 
       if (method === 'POST' && endpoint.includes('/vote')) {
         const parts = endpoint.split('/');
@@ -385,7 +491,8 @@ class ApiClient {
       }
 
       if (method === 'POST') {
-        const track = MOCK_TRACKS.find(t => t._id === body.trackId) || MOCK_TRACKS[2];
+        const storedTracks = JSON.parse(localStorage.getItem('aidj_sim_tracks') || 'null') || MOCK_TRACKS;
+        const track = storedTracks.find(t => t._id === body.trackId) || MOCK_TRACKS.find(t => t._id === body.trackId) || storedTracks[0];
         const user = JSON.parse(localStorage.getItem('aidj_user') || 'null') || MOCK_USERS[0];
         lounge.queue.push({
           _id: 'q_' + Date.now(),
@@ -406,7 +513,9 @@ class ApiClient {
     // 9. Soundclash
     if (endpoint.includes('/soundclash')) {
       const lounges = JSON.parse(localStorage.getItem('aidj_sim_lounges') || 'null') || MOCK_LOUNGES;
-      const lounge = lounges[0];
+      const pathParts = endpoint.split('?')[0].split('/');
+      const loungeId = pathParts[2];
+      const lounge = lounges.find(l => l._id === loungeId || l.inviteCode === loungeId) || lounges[0];
 
       if (endpoint.includes('/vote') && method === 'POST') {
         const battle = lounge.activeBattle;
@@ -433,6 +542,37 @@ class ApiClient {
         }
         localStorage.setItem('aidj_sim_lounges', JSON.stringify(lounges));
         return { success: true, data: { battle, queue: lounge.queue } };
+      }
+
+      // Create Battle
+      if (method === 'POST') {
+        const storedTracks = JSON.parse(localStorage.getItem('aidj_sim_tracks') || 'null') || MOCK_TRACKS;
+        const candidateIds = body.candidateTrackIds || [];
+        const user = JSON.parse(localStorage.getItem('aidj_user') || 'null') || MOCK_USERS[0];
+
+        const candidates = candidateIds.map((tid, idx) => {
+          const track = storedTracks.find(t => t._id === tid) || MOCK_TRACKS[idx] || MOCK_TRACKS[0];
+          return {
+            _id: 'bc_' + Date.now() + '_' + idx,
+            track,
+            submittedBy: user,
+            votes: []
+          };
+        });
+
+        const battle = {
+          _id: 'b_' + Date.now(),
+          lounge: lounge._id,
+          status: 'voting',
+          durationSeconds: body.durationSeconds || 45,
+          startedAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + (body.durationSeconds || 45) * 1000).toISOString(),
+          candidates
+        };
+
+        lounge.activeBattle = battle;
+        localStorage.setItem('aidj_sim_lounges', JSON.stringify(lounges));
+        return { success: true, message: 'Soundclash battle launched.', data: { battle } };
       }
 
       return { success: true, data: { battle: lounge.activeBattle } };
@@ -571,32 +711,45 @@ class ApiClient {
 
     // 17. Analytics
     if (endpoint.includes('/analytics/')) {
+      const lounges = JSON.parse(localStorage.getItem('aidj_sim_lounges') || 'null') || MOCK_LOUNGES;
+      const pathParts = endpoint.split('?')[0].split('/');
+      const loungeId = pathParts[pathParts.indexOf('lounges') + 1] || 'l_nexus1';
+      const lounge = lounges.find(l => l._id === loungeId || l.inviteCode === loungeId) || lounges[0];
+
       return {
         success: true,
         data: {
           analytics: {
-            sessionSummary: {
-              name: 'Nexus Club: Peak Floor',
-              host: MOCK_USERS[0],
-              durationMinutes: 45,
-              totalTracksPlayed: 8,
-              totalChatMessages: 42,
-              peakListeners: 38,
-              averageSentiment: 0.74,
-              vibeProfile: 'Deep House'
-            },
-            timelineData: [
-              { time: '21:00', sentiment: 0.5, listeners: 14, bpm: 124 },
-              { time: '21:10', sentiment: 0.65, listeners: 22, bpm: 126 },
-              { time: '21:20', sentiment: 0.82, listeners: 31, bpm: 127 },
-              { time: '21:30', sentiment: 0.76, listeners: 38, bpm: 128 },
-              { time: '21:40', sentiment: 0.79, listeners: 36, bpm: 126 }
+            loungeId: lounge._id,
+            loungeName: lounge.name,
+            vibeProfile: lounge.vibeProfile,
+            sessionDuration: 45,
+            peakParticipants: lounge.participants?.length || 38,
+            totalTracksPlayed: (lounge.queue?.length || 0) + 1,
+            totalQueueVotes: 14,
+            soundclashCount: 2,
+            aiQuestionsCount: 12,
+            averageSentiment: 0.74,
+            sentimentCategory: 'Positive / Energetic',
+            sentimentTimeline: [
+              { timestamp: '21:00', score: 0.52, label: 'positive' },
+              { timestamp: '21:10', score: 0.65, label: 'positive' },
+              { timestamp: '21:20', score: 0.82, label: 'positive' },
+              { timestamp: '21:30', score: 0.74, label: 'positive' },
+              { timestamp: '21:40', score: 0.78, label: 'positive' }
             ],
-            topVotedTracks: [
-              { track: MOCK_TRACKS[1], votes: 14 },
-              { track: MOCK_TRACKS[2], votes: 11 },
-              { track: MOCK_TRACKS[0], votes: 9 }
-            ]
+            energyProgression: [
+              { timestamp: '21:00', trackTitle: 'Neon Odyssey', energy: 0.82, bpm: 126 },
+              { timestamp: '21:15', trackTitle: 'Midnight Transmission', energy: 0.76, bpm: 124 },
+              { timestamp: '21:30', trackTitle: 'Quantum Horizon', energy: 0.88, bpm: 127 },
+              { timestamp: '21:45', trackTitle: 'Solar Flare', energy: 0.85, bpm: 128 }
+            ],
+            mostVotedTracks: [
+              { track: 't_002', title: 'Midnight Transmission', artist: 'Velvet Pulse', voteCount: 14 },
+              { track: 't_003', title: 'Quantum Horizon', artist: 'Astral Echoes', voteCount: 11 },
+              { track: 't_001', title: 'Neon Odyssey', artist: 'Kroma & CyberVibe', voteCount: 9 }
+            ],
+            isLiveSession: lounge.status === 'active'
           }
         }
       };

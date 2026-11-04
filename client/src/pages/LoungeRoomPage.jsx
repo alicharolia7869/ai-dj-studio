@@ -112,7 +112,10 @@ export default function LoungeRoomPage() {
 
   const handleCopyInvite = () => {
     if (lounge?.inviteCode) {
-      navigator.clipboard.writeText(`${window.location.origin}/lounge/${lounge._id}`);
+      const shareUrl = `${window.location.origin}/lounge/${lounge._id}`;
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(shareUrl).catch(() => {});
+      }
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2000);
     }
@@ -405,8 +408,8 @@ export default function LoungeRoomPage() {
 
                 {/* Candidate tracks */}
                 <div className="space-y-2.5">
-                  {activeBattle.candidates.map((cand, idx) => {
-                    const totalVotes = activeBattle.candidates.reduce((sum, c) => sum + (c.votes?.length || 0), 0);
+                  {(activeBattle.candidates || []).map((cand, idx) => {
+                    const totalVotes = (activeBattle.candidates || []).reduce((sum, c) => sum + (c.votes?.length || 0), 0);
                     const voteCount = cand.votes?.length || 0;
                     const pct = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
                     const userVotedForThis = cand.votes?.some(v => (v.user?._id || v.user) === user?._id);

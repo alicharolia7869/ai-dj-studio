@@ -125,8 +125,8 @@ class AudioEngine {
     this.isSynthesized = true;
     this.currentTime = startPosition;
 
-    const bpm = track.acousticProfile?.bpm || track.bpm || 126;
-    const camelotKey = (track.acousticProfile?.camelotKey || track.camelotKey || '8A').toUpperCase();
+    const bpm = track?.acousticProfile?.bpm || track?.bpm || 126;
+    const camelotKey = (track?.acousticProfile?.camelotKey || track?.camelotKey || '8A').toUpperCase();
     const rootFreq = CAMELOT_ROOT_FREQUENCIES[camelotKey] || 110.0;
     const stepDurationMs = (60 / bpm / 4) * 1000; // 16th note step
 
@@ -152,7 +152,7 @@ class AudioEngine {
   }
 
   _playBeatStep(step, rootFreq) {
-    if (!this.audioCtx) return;
+    if (!this.audioCtx || !this.masterGain) return;
     const now = this.audioCtx.currentTime;
 
     // 1. Kick on beats 0, 4, 8, 12 (4-on-the-floor)

@@ -76,6 +76,16 @@ class LocalSocketEmitter {
           this._trigger('queue:update', { queue: res.data.queue, action: 'vote' });
         }
       } catch (_) {}
+    } else if (event === 'soundclash:create') {
+      try {
+        const res = await api.createBattle(loungeId, {
+          candidateTrackIds: data.candidateTrackIds,
+          durationSeconds: data.durationSeconds || 45
+        });
+        if (res.data?.battle) {
+          this._trigger('soundclash:opened', { battle: res.data.battle });
+        }
+      } catch (_) {}
     } else if (event === 'soundclash:vote') {
       try {
         const res = await api.voteBattle(loungeId, data.battleId, data.candidateTrackId);

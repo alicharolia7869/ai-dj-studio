@@ -132,7 +132,10 @@ export default function AnalyticsPage() {
           <Activity className="w-4 h-4 text-cyan-400 mb-2" />
           <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Avg Sentiment</span>
           <p className="text-lg font-black text-white font-mono mt-0.5">
-            {analytics.averageSentiment > 0 ? `+${analytics.averageSentiment.toFixed(2)}` : analytics.averageSentiment.toFixed(2)}
+            {(() => {
+              const val = typeof analytics.averageSentiment === 'number' ? analytics.averageSentiment : (Number(analytics.averageSentiment) || 0);
+              return val > 0 ? `+${val.toFixed(2)}` : val.toFixed(2);
+            })()}
           </p>
         </div>
       </div>
